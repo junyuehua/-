@@ -90,3 +90,22 @@
   opacity: 1;
   visibility: visible;
 }
+
+/* —— 视口清晰度指示条（PRD §3.1：含义 = 当前视口清晰度，非整图进度）；视觉为占位方案 —— */
+.clarityBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  z-index: 12;
+  background: var(--ui-gold);
+  opacity: 0;
+  transition:
+    width 200ms ease,
+    opacity 400ms ease;
+  pointer-events: none;
+}
+
+.clarityBarVisible {
+  opacity: 0.9;
+}

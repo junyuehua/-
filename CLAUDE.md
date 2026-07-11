@@ -59,7 +59,8 @@
 
 ## 文件位置
 - 正式项目文件夹：本文件所在目录
-- **前端工程：`app/`**（Vite + React + TS）——组件库 + 交互框架已落地；`npm run dev` 启动，`/?showcase` 为组件对照页；viewer 核心（pan/zoom/模式切换/toast/导航条联动）在 `app/src/viewer/`，可调参数集中在 `app/src/viewer/constants.ts`
+- **前端工程：`app/`**（Vite + React + TS）——组件库 + 交互框架 + 瓦片渲染已落地；`npm run dev` 启动，`/?showcase` 为组件对照页；viewer 核心（pan/zoom/模式切换/toast/导航条联动/瓦片层）在 `app/src/viewer/`，可调参数集中在 `app/src/viewer/constants.ts`
+- **深度缩放瓦片：`app/public/tiles/`**（DZI，368MB，已 gitignore 不入库）——用 `app/scripts/generate-tiles.sh` 从全分辨率原图重新生成；拼接顺序（左→右 = 4→3→2→裁后1）与坐标系绑定，勿改
 - **开发计划与里程碑：`development-plan.md`**（M0 组件库 ✅ / M1 交互框架 ✅ / M2 瓦片 / M3 标注 / M4 聚合 / M5 壳层 / M6 发布）
 - 完整卷轴原始扫描件（拼装前）：`Full scroll/1.jpg` ~ `4.jpg`（宽度 43276/50000/38778/50000，高均7595）
 - **官方拼接master（source of truth）：`清明上河图-完整拼接.jpg`**（项目根目录）——右→左拼接 + 已切金色画，64139×3038、约195MP（受JPEG单边65535上限与内存限制，为2.5×线性缩小；真实完整分辨率 **160348×7595** 才是坐标系统基准，不等于这个文件本身像素尺寸）

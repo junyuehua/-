@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppBackground } from './components/AppBackground/AppBackground'
 import { IconButton } from './components/IconButton/IconButton'
 import { ModeToggle, type ViewMode } from './components/ModeToggle/ModeToggle'
@@ -29,6 +29,10 @@ export default function App() {
 function Viewer() {
   const [mode, setMode] = useState<ViewMode>('learn')
   const { canvasRef, view, size, dragging, handlers, resetToActual, jumpToFraction } = useViewer()
+
+  // 视口清晰度（视口内高清瓦片加载比例），驱动顶部细进度条；指示条视觉为占位方案（ui-backlog #7 同类）
+  const [clarity, setClarity] = useState(1)
+  const handleClarity = useCallback((ratio: number) => setClarity(ratio), [])
 
   // —— 比例 toast：缩放变化时出现，停留 TOAST_HIDE_MS 后消失（时长待实测调整）——
   const [toastVisible, setToastVisible] = useState(false)
@@ -111,7 +115,19 @@ function Viewer() {
   return (
     <div>
       <AppBackground />
-      <ScrollCanvas view={view} dragging={dragging} canvasRef={canvasRef} handlers={handlers} />
+      <ScrollCanvas
+        view={view}
+        size={size}
+        dragging={dragging}
+        canvasRef={canvasRef}
+        handlers={handlers}
+        onClarity={handleClarity}
+      />
+
+      <div
+        className={`${styles.clarityBar} ${clarity < 1 ? styles.clarityBarVisible : ''}`}
+        style={{ width: `${clarity * 100}%` }}
+      />
 
       <header className={`${styles.topBar} ${topVisible ? '' : styles.topHidden}`}>
         <ModeToggle value={mode} onChange={setMode} />

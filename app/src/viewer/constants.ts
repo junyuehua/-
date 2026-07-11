@@ -6,8 +6,18 @@ export const CONTENT_H = 7595
 export const WORKING_W = 16000
 export const WORKING_H = 758
 
-/** 最大缩放暂定值（内部 zoom，1 = 扫描分辨率 1:1）——瓦片最高精度层设计明确后再定（PRD §7） */
-export const MAX_ZOOM = 5
+/** 最大缩放 = 扫描分辨率 200%（2026-07-10 拍板，后续可调）；超过 100% 即纯像素放大 */
+export const MAX_ZOOM = 2
+
+/* —— 深度缩放瓦片（DZI，由 app/scripts/generate-tiles.sh 生成到 public/tiles/）—— */
+export const TILE_SIZE = 512
+export const TILE_OVERLAP = 1
+/** DZI 金字塔最高层级 = ceil(log2(160348)) = 18；层级 L 的缩放 = 2^(L-18) */
+export const TILE_MAX_LEVEL = Math.ceil(Math.log2(CONTENT_W))
+/** 低于该层级没必要渲染（整卷不足一屏，交给常驻的工作副本底图） */
+export const TILE_MIN_LEVEL = 11
+export const tileUrl = (level: number, x: number, y: number) =>
+  `/tiles/qingming_files/${level}/${x}_${y}.jpg`
 
 /** 最小缩放 = 整幅画完整入画（fit 全卷，随视口尺寸动态计算） */
 export function fitZoom(vw: number, vh: number): number {
