@@ -1,0 +1,8 @@
+/* Figma 分类标识：32×32 导出 SVG 原样呈现 */
+.seal {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  user-select: none;
+}

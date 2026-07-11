@@ -1,0 +1,18 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-grad-bottom);
+  font-family: var(--font-serif);
+  color: var(--text-black);
+  -webkit-font-smoothing: antialiased;
+}

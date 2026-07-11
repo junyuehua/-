@@ -1,0 +1,32 @@
+/* Design tokens — source of truth: Figma「清明」Final designs 页 */
+:root {
+  /* 具名色样式 */
+  --paper: #fbf6ea; /* 纸面 */
+  --paper-80: rgba(251, 246, 234, 0.8); /* 卡片背景 */
+  --ui-gold: #dccca8; /* UI金 */
+  --gold-hover: rgba(220, 204, 168, 0.6); /* 金-hover */
+  --gold-text: #96762e; /* 金字 */
+  --text-black: #1e2732; /* 字黑 */
+  --text-gold: #7f6019; /* 字金 */
+  --text-white: #ffffff; /* 字白 */
+  --ui-red: #b93a26; /* UI红 */
+
+  /* 5 分类色 */
+  --cat-arch: #7c4449; /* 建筑·胭虹 */
+  --cat-figure: #32788a; /* 人物·青蓝 */
+  --cat-object: #6b798e; /* 物件·灰蓝 */
+  --cat-plant: #6a8d52; /* 植物·灰绿 */
+  --cat-animal: #be8a2f; /* 动物·赭石 */
+
+  /* 背景渐变 */
+  --bg-grad-top: #765e44;
+  --bg-grad-bottom: #60482e;
+
+  /* 圆角 */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+
+  /* 字体 */
+  --font-kanji: "AaGuDianKeBenSongYMB", "Noto Serif SC", serif;
+  --font-serif: "Source Han Serif SC", "Noto Serif SC", serif;
+}

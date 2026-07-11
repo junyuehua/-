@@ -1,0 +1,37 @@
+/* Figma 模式选择 65:213：纸面底 / UI金描边 / p3 gap2 radius4；Tab 65:223 h32 px16 radius2 */
+.toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--paper);
+  border: 1px solid var(--ui-gold);
+  border-radius: var(--radius-md);
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 6px 16px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.7px;
+  color: var(--text-gold);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.tab:not(.selected):hover {
+  background: var(--gold-hover);
+}
+
+.selected {
+  background: var(--ui-red);
+  color: var(--text-white);
+}

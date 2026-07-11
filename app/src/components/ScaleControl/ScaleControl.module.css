@@ -1,0 +1,21 @@
+/* Figma 比例toast 70:2434：h38 / px16 py4 / 纸面底 / radius2 / 思源宋 Bold 14px */
+.toast {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 4px 16px;
+  background: var(--paper);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-black);
+  white-space: nowrap;
+}
+
+.control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

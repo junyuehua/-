@@ -1,0 +1,17 @@
+/* Figma 68:597 背景渐变 + 71:10304 莲花纹（tile 1620×2880，50% 不透明度叠加后再压暗到 subtle） */
+.background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(to bottom, var(--bg-grad-top), var(--bg-grad-bottom));
+  overflow: hidden;
+}
+
+.pattern {
+  position: absolute;
+  inset: 0;
+  background-image: url('../../assets/lotus-pattern.png');
+  background-size: 300px 533px;
+  background-repeat: repeat;
+  opacity: 0.12;
+}

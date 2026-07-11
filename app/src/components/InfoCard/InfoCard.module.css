@@ -1,0 +1,45 @@
+/* Figma 卡片wraper 63:208：280 宽 / 纸面80% / p8 radius2；内层金字描边 p24 gap16 */
+.card {
+  width: 280px;
+  padding: 8px;
+  background: var(--paper-80);
+  border-radius: var(--radius-sm);
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid var(--gold-text);
+  border-radius: var(--radius-sm);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-kanji);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: normal;
+  color: var(--text-black);
+  white-space: nowrap;
+}
+
+.body {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 2;
+  color: var(--text-black);
+}
+
+.body a {
+  color: var(--ui-red);
+  text-decoration: underline;
+}

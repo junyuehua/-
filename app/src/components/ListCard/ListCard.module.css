@@ -1,0 +1,42 @@
+/* Figma 列表wraper 68:306：185 宽 / 纸面80% / p8 radius2；列表项 70:2377 px16 py8 gap8，hover 金-hover */
+.card {
+  width: 185px;
+  min-width: 185px;
+  padding: 8px;
+  background: var(--paper-80);
+  border-radius: var(--radius-sm);
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  border: 1px solid var(--gold-text);
+  border-radius: var(--radius-sm);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.item:hover {
+  background: var(--gold-hover);
+}
+
+.label {
+  font-family: var(--font-kanji);
+  font-size: 18px;
+  line-height: normal;
+  color: var(--text-black);
+  white-space: nowrap;
+}
