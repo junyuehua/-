@@ -1,0 +1,43 @@
+.showcase {
+  position: relative;
+  z-index: 1;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 48px 160px;
+}
+
+.pageTitle {
+  margin: 0 0 40px;
+  font-family: var(--font-kanji);
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--paper);
+}
+
+.section {
+  margin-bottom: 48px;
+}
+
+.sectionTitle {
+  margin: 0 0 16px;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.7px;
+  color: var(--ui-gold);
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.navSlot {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}

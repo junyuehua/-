@@ -1,4 +1,4 @@
-/* Figma Button 65:302：38×38 / 纸面底 / UI金描边 / hover UI金实色 */
+/* Figma Button 65:302：38×38 / 纸面 80% 半透明底（透出画面）/ UI金描边 / hover UI金实色 */
 .button {
   display: inline-flex;
   align-items: center;
@@ -6,7 +6,7 @@
   width: 38px;
   height: 38px;
   padding: 0;
-  background: var(--paper);
+  background: var(--paper-80);
   border: 1px solid var(--ui-gold);
   border-radius: var(--radius-sm);
   color: var(--text-gold);

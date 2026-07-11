@@ -1,43 +1,92 @@
-.showcase {
-  position: relative;
-  z-index: 1;
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 48px 48px 160px;
-}
-
-.pageTitle {
-  margin: 0 0 40px;
-  font-family: var(--font-kanji);
-  font-size: 28px;
-  font-weight: 400;
-  color: var(--paper);
-}
-
-.section {
-  margin-bottom: 48px;
-}
-
-.sectionTitle {
-  margin: 0 0 16px;
-  font-family: var(--font-serif);
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.7px;
-  color: var(--ui-gold);
-}
-
-.row {
+/* —— 顶部元控件区（mockup 68:499：左 toggle、右按钮簇，边距 48px）—— */
+.topBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
   display: flex;
+  justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
-  flex-wrap: wrap;
+  padding: 48px;
+  pointer-events: none;
+  transform: translateY(0);
 }
 
-.navSlot {
+.topBar > * {
+  pointer-events: auto;
+}
+
+.topRight {
+  display: flex;
+  gap: 12px;
+}
+
+/* —— 底部导航栏 —— */
+.bottomBar {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1;
+  z-index: 10;
+  transform: translateY(0);
+}
+
+/* 退场态公共规则：立即失去交互，具体位移/透明度/曲线由动画方案定义 */
+.topHidden,
+.bottomHidden {
+  pointer-events: none;
+}
+
+.topHidden > * {
+  pointer-events: none;
+}
+
+/* —— UI 退场/入场动画（2026-07-10 定稿：「舒缓滑出」，滑出屏幕 + 渐隐，1000ms，easeOutQuint 长尾收尾）—— */
+.topBar,
+.bottomBar {
+  transition:
+    transform 1000ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 1000ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.topHidden {
+  transform: translateY(calc(-100% - 8px));
+  opacity: 0;
+}
+
+.bottomHidden {
+  transform: translateY(calc(100% + 8px));
+  opacity: 0;
+}
+
+/* —— 缩放控制簇：水平居中，悬在导航栏上方 32px（mockup 实测）—— */
+.scaleCluster {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(4.4vw + 32px);
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: bottom 1000ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 导航栏退场后，控制簇贴近屏幕底部 */
+.scaleClusterLow {
+  bottom: 32px;
+}
+
+.fadeItem {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 200ms ease,
+    visibility 200ms;
+}
+
+.fadeVisible {
+  opacity: 1;
+  visibility: visible;
 }

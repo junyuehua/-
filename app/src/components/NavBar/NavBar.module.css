@@ -6,10 +6,36 @@
   background: var(--ui-gold);
 }
 
+.inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+/* 缩略图用 fill（非 cover），保证指示框的分数坐标与画面精确对应 */
 .thumbnail {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: fill;
   user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* 视口指示框：视觉样式为占位方案，等视觉稿定稿后替换 */
+.indicator {
+  position: absolute;
+  box-sizing: border-box;
+  min-width: 6px;
+  border: 2px solid var(--paper);
+  border-radius: 1px;
+  box-shadow:
+    0 0 0 1px rgba(30, 39, 50, 0.45),
+    inset 0 0 0 1px rgba(30, 39, 50, 0.45);
+  pointer-events: none;
 }

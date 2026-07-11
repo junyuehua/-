@@ -1,9 +1,9 @@
-/* Figma 模式选择 65:213：纸面底 / UI金描边 / p3 gap2 radius4；Tab 65:223 h32 px16 radius2 */
+/* Figma 模式选择 65:213：纸面 80% 半透明底（透出画面）/ UI金描边 / p3 gap2 radius4；Tab 65:223 h32 px16 radius2 */
 .toggle {
   display: inline-flex;
   gap: 2px;
   padding: 3px;
-  background: var(--paper);
+  background: var(--paper-80);
   border: 1px solid var(--ui-gold);
   border-radius: var(--radius-md);
 }

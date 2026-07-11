@@ -1,0 +1,23 @@
+.canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.dragging {
+  cursor: grabbing;
+}
+
+.content {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
