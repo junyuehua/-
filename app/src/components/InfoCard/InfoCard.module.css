@@ -1,6 +1,6 @@
-/* Figma 卡片wraper 63:208：280 宽 / 纸面80% / p8 radius2；内层金字描边 p24 gap16 */
+/* Figma 卡片wraper 63:208（2026-07-11 更新）：250 宽 / 纸面80% / p8 radius2；内层金字描边 p16 gap8 */
 .card {
-  width: 280px;
+  width: 250px;
   padding: 8px;
   background: var(--paper-80);
   border-radius: var(--radius-sm);
@@ -9,8 +9,8 @@
 .inner {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 24px;
+  gap: 8px;
+  padding: 16px;
   border: 1px solid var(--gold-text);
   border-radius: var(--radius-sm);
 }
@@ -31,7 +31,21 @@
   white-space: nowrap;
 }
 
-/* pre-line 保留标注正文里的换行；长内容卡片内部滚动（滚动事件由挂载方 stopPropagation，PRD §3.8） */
+/* 滚动边缘渐隐用的可动画自定义属性（不支持 @property 的浏览器退化为瞬时切换） */
+@property --fade-t {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-b {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+/* pre-line 保留标注正文里的换行；长内容卡片内部滚动（滚动事件由挂载方 stopPropagation，PRD §3.8）
+   滚出可读范围的文字用渐隐 mask 表达，不做生硬切割；滚动条隐藏 */
 .body {
   font-family: var(--font-serif);
   font-size: 14px;
@@ -41,6 +55,31 @@
   white-space: pre-line;
   max-height: 320px;
   overflow-y: auto;
+  scrollbar-width: none;
+  --fade-t: 0px;
+  --fade-b: 0px;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--fade-t),
+    #000 calc(100% - var(--fade-b)),
+    transparent 100%
+  );
+  transition:
+    --fade-t 250ms ease,
+    --fade-b 250ms ease;
+}
+
+.body::-webkit-scrollbar {
+  display: none;
+}
+
+.fadeTop {
+  --fade-t: 36px;
+}
+
+.fadeBottom {
+  --fade-b: 36px;
 }
 
 .body a {

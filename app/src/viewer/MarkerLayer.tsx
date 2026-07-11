@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { InfoCard } from '../components/InfoCard/InfoCard'
 import { ListCard } from '../components/ListCard/ListCard'
 import {
   CARD_OFFSET_PX,
+  CARD_VIEWPORT_MARGIN_PX,
   CLICK_ZOOM_FACTOR,
   CLUSTER_MARKER_SIZE,
   CLUSTER_THRESHOLD_PX,
@@ -41,9 +42,6 @@ interface MarkerLayerProps {
   /** 以屏幕点为锚缩放（复用 useViewer 的锚定数学） */
   zoomAtPoint: (ax: number, ay: number, zoom: number, animate: boolean) => void
 }
-
-const INFO_CARD_W = 280
-const LIST_CARD_W = 185
 
 export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: MarkerLayerProps) {
   const [hovered, setHovered] = useState<Hovered>(null)
@@ -158,23 +156,39 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
     [view.zoom, zoomAtPoint],
   )
 
-  // —— 卡片摆放：锚点侧向偏移，屏幕右缘不够就翻到左侧；保护区精确算法待定（PRD §8）——
-  const cardPos = (sx: number, sy: number, cardW: number) => {
-    const flip = sx + CARD_OFFSET_PX + cardW + 16 > size.w
-    return {
-      left: flip ? sx - CARD_OFFSET_PX - cardW : sx + CARD_OFFSET_PX,
-      top: sy,
-    }
-  }
-
   const hoveredSingle =
     hovered?.type === 'marker' ? singles.find((p) => p.a.id === hovered.id) : undefined
   const hoveredCluster =
     hovered?.type === 'cluster' ? clusters.find((g) => g.key === hovered.key) : undefined
 
+  // —— 卡片摆放：锚点侧向偏移（右侧优先、不够翻左），渲染后按实测尺寸钳制进可视区 ——
+  // 垂直钳制：上缘留 12px（必要时允许压过顶部 UI），下缘避开导航栏；侧向偏移保证任何垂直位移都不遮锚点。
+  // 锚点"保护区"的精确算法待定（PRD §8）。
+  const cardRef = useRef<HTMLDivElement>(null)
+  const anchorX = hoveredSingle?.sx ?? hoveredCluster?.cx
+  const anchorY = hoveredSingle?.sy ?? hoveredCluster?.cy
+
+  useLayoutEffect(() => {
+    const el = cardRef.current
+    if (!el || anchorX === undefined || anchorY === undefined) return
+    const rect = el.getBoundingClientRect()
+    const navH = size.w * 0.044 // 底部导航栏高度（4.4vw）
+    let left = anchorX + CARD_OFFSET_PX
+    if (left + rect.width + CARD_VIEWPORT_MARGIN_PX > size.w) {
+      left = anchorX - CARD_OFFSET_PX - rect.width
+    }
+    left = Math.max(CARD_VIEWPORT_MARGIN_PX, Math.min(left, size.w - rect.width - CARD_VIEWPORT_MARGIN_PX))
+    let top = anchorY - rect.height / 2
+    const maxTop = size.h - navH - CARD_VIEWPORT_MARGIN_PX - rect.height
+    top = Math.max(CARD_VIEWPORT_MARGIN_PX, Math.min(top, maxTop))
+    el.style.left = `${left}px`
+    el.style.top = `${top}px`
+  }, [anchorX, anchorY, size, hovered])
+
   return (
-    <div className={`${styles.layer} ${visible ? '' : styles.layerHidden}`}>
-      {singles.map((p) => {
+    <>
+      <div className={`${styles.layer} ${visible ? '' : styles.layerHidden}`}>
+        {singles.map((p) => {
         const d = MARKER_SIZE[p.a.tier] ?? MARKER_SIZE.场景
         const isHovered = hovered?.type === 'marker' && hovered.id === p.a.id
         return (
@@ -226,42 +240,48 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
         )
       })}
 
-      {hoveredSingle && (
-        <div
-          className={styles.card}
-          style={cardPos(hoveredSingle.sx, hoveredSingle.sy, INFO_CARD_W)}
-          onMouseEnter={() => hoverEnter({ type: 'marker', id: hoveredSingle.a.id })}
-          onMouseLeave={hoverLeave}
-          onWheel={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <InfoCard
-            category={categoryOf(hoveredSingle.a)}
-            title={hoveredSingle.a.title_zh || '（未命名）'}
-          >
-            {hoveredSingle.a.body_zh}
-          </InfoCard>
-        </div>
-      )}
+      </div>
 
-      {hoveredCluster && (
-        <div
-          className={styles.card}
-          style={cardPos(hoveredCluster.cx, hoveredCluster.cy, LIST_CARD_W)}
-          onMouseEnter={() => hoverEnter({ type: 'cluster', key: hoveredCluster.key })}
-          onMouseLeave={hoverLeave}
-          onWheel={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <ListCard
-            items={hoveredCluster.members.map((m) => ({
-              category: categoryOf(m.a),
-              label: m.a.title_zh || '（未命名）',
-              onClick: () => zoomToClusterMember(hoveredCluster, m),
-            }))}
-          />
+      {/* 卡片独立于 marker 层：z 高于顶部 UI（允许压过），marker 本身仍在导航栏之下 */}
+      {visible && (hoveredSingle || hoveredCluster) && (
+        <div className={styles.cardLayer}>
+          <div
+            ref={cardRef}
+            className={styles.card}
+            style={{
+              left: (anchorX ?? 0) + CARD_OFFSET_PX,
+              top: Math.max(CARD_VIEWPORT_MARGIN_PX, (anchorY ?? 0) - 160),
+            }}
+            onMouseEnter={() =>
+              hoverEnter(
+                hoveredSingle
+                  ? { type: 'marker', id: hoveredSingle.a.id }
+                  : { type: 'cluster', key: hoveredCluster!.key },
+              )
+            }
+            onMouseLeave={hoverLeave}
+            onWheel={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {hoveredSingle ? (
+              <InfoCard
+                category={categoryOf(hoveredSingle.a)}
+                title={hoveredSingle.a.title_zh || '（未命名）'}
+              >
+                {hoveredSingle.a.body_zh}
+              </InfoCard>
+            ) : (
+              <ListCard
+                items={hoveredCluster!.members.map((m) => ({
+                  category: categoryOf(m.a),
+                  label: m.a.title_zh || '（未命名）',
+                  onClick: () => zoomToClusterMember(hoveredCluster!, m),
+                }))}
+              />
+            )}
+          </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

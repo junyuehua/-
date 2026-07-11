@@ -68,5 +68,7 @@ export const CLUSTER_THRESHOLD_PX = 48
 export const HOVER_LEAVE_MS = 280
 /** 信息卡与锚点的间距（保护区具体算法待定，先用固定侧向偏移保证不遮锚点） */
 export const CARD_OFFSET_PX = 24
+/** 卡片距视口边缘的最小留白；底部另加导航栏高度（避开底部 UI，顶部允许压过 UI） */
+export const CARD_VIEWPORT_MARGIN_PX = 12
 /** 视口外多渲染的余量，避免边缘 marker 拖入时闪现 */
 export const MARKER_CULL_MARGIN_PX = 120
