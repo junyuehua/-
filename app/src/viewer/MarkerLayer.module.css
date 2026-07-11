@@ -29,11 +29,14 @@
   cursor: pointer;
 }
 
-/* 静止态圆点：呼吸/微光 idle 动效，不是死板的实心点（PRD §3.8） */
+/* 静止态圆点（2026-07-11 定稿「柔边模糊」：blur 2px / 透明度 0.6，用户实调选定）：
+   边缘晕开如墨点，呼吸动效带缩放 + 明暗起伏（PRD §3.8 不做死板实心点） */
 .dot {
   border-radius: 50%;
-  box-shadow: 0 0 0 1.5px rgba(251, 246, 234, 0.55);
-  animation: breathe 3.2s ease-in-out infinite;
+  background-color: var(--dot-c);
+  filter: blur(2px);
+  opacity: 0.6;
+  animation: breathe 4.8s ease-in-out infinite;
   transition: opacity 160ms ease;
 }
 
@@ -41,22 +44,24 @@
   0%,
   100% {
     transform: scale(1);
-    opacity: 0.82;
+    opacity: 0.5;
   }
   50% {
-    transform: scale(1.12);
-    opacity: 1;
+    transform: scale(1.25);
+    opacity: 0.75;
   }
 }
 
-/* 悬停：marker 视觉淡出，被信息卡取代（交互热区保留） */
+/* 悬停：marker 视觉淡出，被信息卡取代（交互热区保留）；!important 压过呼吸动画的 opacity */
 .dotHidden {
   opacity: 0 !important;
+  animation: none;
 }
 
 .clusterIcon {
-  filter: drop-shadow(0 0 2px rgba(30, 39, 50, 0.4));
-  animation: breathe 3.2s ease-in-out infinite;
+  opacity: 0.6;
+  filter: blur(1.2px) drop-shadow(0 0 2px rgba(30, 39, 50, 0.35));
+  animation: breathe 4.8s ease-in-out infinite;
   transition: opacity 160ms ease;
 }
 

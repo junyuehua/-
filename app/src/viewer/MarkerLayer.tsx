@@ -205,8 +205,8 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
               style={{
                 width: d,
                 height: d,
-                backgroundColor: CATEGORY_COLOR[categoryOf(p.a)],
-              }}
+                '--dot-c': CATEGORY_COLOR[categoryOf(p.a)],
+              } as React.CSSProperties}
             />
           </div>
         )
