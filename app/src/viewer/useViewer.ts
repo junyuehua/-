@@ -210,6 +210,7 @@ export function useViewer() {
     size,
     dragging,
     handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel },
+    zoomAtPoint,
     resetToActual,
     jumpToFraction,
   }

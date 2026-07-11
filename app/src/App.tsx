@@ -6,6 +6,9 @@ import { NavBar } from './components/NavBar/NavBar'
 import { ScaleToast } from './components/ScaleControl/ScaleControl'
 import { MusicNoteIcon, TranslateIcon, ViewRealSizeIcon } from './components/icons'
 import { Showcase } from './showcase/Showcase'
+import annotationsData from '../annotations.json'
+import type { Annotation } from './viewer/annotations'
+import { MarkerLayer } from './viewer/MarkerLayer'
 import { ScrollCanvas } from './viewer/ScrollCanvas'
 import { useViewer } from './viewer/useViewer'
 import {
@@ -26,9 +29,13 @@ export default function App() {
   return <Viewer />
 }
 
+/** 标注数据：用户仍在持续打点，直接改 app/annotations.json 即可热更新 */
+const annotations = annotationsData as unknown as Annotation[]
+
 function Viewer() {
   const [mode, setMode] = useState<ViewMode>('learn')
-  const { canvasRef, view, size, dragging, handlers, resetToActual, jumpToFraction } = useViewer()
+  const { canvasRef, view, size, dragging, handlers, zoomAtPoint, resetToActual, jumpToFraction } =
+    useViewer()
 
   // 视口清晰度（视口内高清瓦片加载比例），驱动顶部细进度条；指示条视觉为占位方案（ui-backlog #7 同类）
   const [clarity, setClarity] = useState(1)
@@ -127,6 +134,14 @@ function Viewer() {
       <div
         className={`${styles.clarityBar} ${clarity < 1 ? styles.clarityBarVisible : ''}`}
         style={{ width: `${clarity * 100}%` }}
+      />
+
+      <MarkerLayer
+        annotations={annotations}
+        view={view}
+        size={size}
+        visible={mode === 'learn'}
+        zoomAtPoint={zoomAtPoint}
       />
 
       <header className={`${styles.topBar} ${topVisible ? '' : styles.topHidden}`}>

@@ -54,3 +54,19 @@ export const TOAST_HIDE_MS = 1200
 export const EDGE_ZONE_TOP_PX = 120
 export const EDGE_ZONE_BOTTOM_PX = 160
 export const UI_LEAVE_DELAY_MS = 200
+
+/* —— 标注 marker（尺寸/偏移全部为固定屏幕像素，不随缩放变化，PRD §3.8）—— */
+/** marker 直径按层级分级：地标最大 / 场景中等（=Figma 标识 68:368 的 16px 基准）/ 细节最小 */
+export const MARKER_SIZE: Record<string, number> = { 地标: 22, 场景: 16, 细节: 12 }
+/** marker 相对锚点的偏移（屏幕像素）。PRD 要求偏移避让被标注元素本身；标点调试期先设 0 便于校准坐标 */
+export const MARKER_OFFSET = { x: 0, y: 0 }
+/** 聚合标记尺寸（三圆品字形，Figma 聚合标识 68:367 为 22×21 基准） */
+export const CLUSTER_MARKER_SIZE = 26
+/** 聚合阈值（屏幕像素距离，单阈值起步；双阈值防抖动留到真实内容实测再定，PRD §8） */
+export const CLUSTER_THRESHOLD_PX = 48
+/** marker/卡片共享悬停态的离开缓冲（PRD §3.8：250-300ms） */
+export const HOVER_LEAVE_MS = 280
+/** 信息卡与锚点的间距（保护区具体算法待定，先用固定侧向偏移保证不遮锚点） */
+export const CARD_OFFSET_PX = 24
+/** 视口外多渲染的余量，避免边缘 marker 拖入时闪现 */
+export const MARKER_CULL_MARGIN_PX = 120

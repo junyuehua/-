@@ -31,12 +31,16 @@
   white-space: nowrap;
 }
 
+/* pre-line 保留标注正文里的换行；长内容卡片内部滚动（滚动事件由挂载方 stopPropagation，PRD §3.8） */
 .body {
   font-family: var(--font-serif);
   font-size: 14px;
   font-weight: 500;
   line-height: 2;
   color: var(--text-black);
+  white-space: pre-line;
+  max-height: 320px;
+  overflow-y: auto;
 }
 
 .body a {

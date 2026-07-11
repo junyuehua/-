@@ -1,0 +1,68 @@
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 400ms ease;
+}
+
+.layerHidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.layerHidden * {
+  pointer-events: none !important;
+}
+
+/* 点击热区：比可见圆点大一圈，marker 视觉消失时热区依然生效（PRD §3.8） */
+.hit {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* 静止态圆点：呼吸/微光 idle 动效，不是死板的实心点（PRD §3.8） */
+.dot {
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px rgba(251, 246, 234, 0.55);
+  animation: breathe 3.2s ease-in-out infinite;
+  transition: opacity 160ms ease;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.82;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+/* 悬停：marker 视觉淡出，被信息卡取代（交互热区保留） */
+.dotHidden {
+  opacity: 0 !important;
+}
+
+.clusterIcon {
+  filter: drop-shadow(0 0 2px rgba(30, 39, 50, 0.4));
+  animation: breathe 3.2s ease-in-out infinite;
+  transition: opacity 160ms ease;
+}
+
+.card {
+  position: absolute;
+  transform: translateY(-50%);
+  pointer-events: auto;
+  z-index: 6;
+}
