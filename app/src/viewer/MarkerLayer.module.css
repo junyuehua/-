@@ -16,6 +16,7 @@
 }
 
 /* 点击热区：比可见圈大一圈，marker 视觉消失时热区依然生效（PRD §3.8）。
+   宽高由内联样式给（MARKER_HIT_SIZE × markerGrowth，高倍缩放随圈同步放大），此处 36px 仅兜底。
    mix-blend-multiply 必须放在这一层——.hit 自带 transform（stacking context），
    若放在子元素上会被隔离、乘在透明背景上等于失效（就是"浮于纸面"问题的根源）。
    聚合的白色汉字在整体 multiply 下自然变成"留白负形透出绢底"（PRD §3.8 预期效果） */
@@ -50,12 +51,12 @@
   height: 100%;
 }
 
-/* 细节小圈（12px）加粗：给笔触路径叠同色描边，避免又小又细看不清。
+/* 细节小圈（14px）加粗：给笔触路径叠同色描边，避免又小又细看不清。
    注意别加太厚——圈心闭合会读成"实心"、与聚合标记语义撞车（PRD §3.8 实心=内容多）。
-   stroke 单位=SVG user units（viewBox 约 18-21 宽），0.7 ≈ 12px 显示下环厚 +0.9px */
+   stroke 单位=SVG user units（viewBox 约 18-21 宽），0.9 ≈ 14px 显示下环厚 +1.3px */
 .circleThick svg path {
   stroke: #8a2e1e;
-  stroke-width: 0.7px;
+  stroke-width: 0.9px;
 }
 
 /* 悬停：marker 视觉淡出，被信息卡取代（交互热区保留） */

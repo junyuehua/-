@@ -12,6 +12,9 @@ export interface Annotation {
   /** 正文；Markdown 约定：以 > 开头的行 = 金色引用块（空行分段），[文字](url) = 行内链接（PRD §4） */
   body_zh: string
   body_en: string
+  /** 标注工具导出的引文备份字段：内容与 body 内联 > 引用块重复，渲染不读它们（以 body 为准） */
+  quote_zh?: string
+  quote_en?: string
 }
 
 const TAG_TO_CATEGORY: Record<string, Category> = {

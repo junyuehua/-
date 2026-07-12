@@ -55,9 +55,22 @@ export const EDGE_ZONE_TOP_PX = 120
 export const EDGE_ZONE_BOTTOM_PX = 160
 export const UI_LEAVE_DELAY_MS = 200
 
-/* —— 标注 marker：朱笔圈点（尺寸/偏移全部为固定屏幕像素，不随缩放变化，PRD §3.8）—— */
+/* —— 标注 marker：朱笔圈点（实物 100% 以内为固定屏幕像素；超过后随缩放温和放大，见 markerGrowth）—— */
 /** 圈的大小＝层级：地标大圈 / 场景中圈 / 细节小圈，三档离散、档间留足间距 */
-export const MARKER_SIZE: Record<string, number> = { 地标: 28, 场景: 18, 细节: 12 }
+export const MARKER_SIZE: Record<string, number> = { 地标: 28, 场景: 18, 细节: 14 }
+/** marker 点击热区基准尺寸（比可见圈大一圈，随 markerGrowth 同步放大） */
+export const MARKER_HIT_SIZE = 36
+/** 高倍缩放下 marker 的放大上限 */
+export const MARKER_GROWTH_MAX = 3
+/**
+ * 高倍缩放 marker 放大系数（2026-07-11：修"放大后朱圈异常小又细"）：
+ * 实物 100% 以内保持固定屏幕像素（growth=1）；超过后按 √(实物比例) 增长——
+ * 增速慢于画面本身（不喧宾夺主，保留"越放大存在感越弱"的方向），但不再小到看不清；封顶 3×。
+ * 笔触厚度随 SVG 整体缩放自然同步变粗，无需单独处理。
+ */
+export function markerGrowth(zoom: number): number {
+  return Math.min(MARKER_GROWTH_MAX, Math.max(1, Math.sqrt(zoom / PHYSICAL_1_ZOOM)))
+}
 /** marker 相对锚点的偏移（屏幕像素）。PRD 要求偏移避让被标注元素本身；标点调试期先设 0 便于校准坐标 */
 export const MARKER_OFFSET = { x: 0, y: 0 }
 /** 聚合标记：单一固定尺寸（不参与"大小=层级"，数量交给中间的汉字；不比地标大圈抢眼），Figma 标记 106:3907 */

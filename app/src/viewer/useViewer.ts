@@ -124,6 +124,24 @@ export function useViewer() {
     [animateTo],
   )
 
+  /** 分段导览跳转：横向对准 content x=cx、视口框住 cw 宽（zoom 现算不存倍数，PRD §3.11），纵向居中 */
+  const flyToContent = useCallback(
+    (cx: number, cw: number) => {
+      const zoom = sizeRef.current.w / cw
+      const target = clampView(
+        {
+          zoom,
+          tx: sizeRef.current.w / 2 - cx * zoom,
+          ty: (sizeRef.current.h - CONTENT_H * zoom) / 2,
+        },
+        sizeRef.current.w,
+        sizeRef.current.h,
+      )
+      animateTo(target, JUMP_MS)
+    },
+    [animateTo],
+  )
+
   // —— 拖拽平移 / 单击放大 ——
   const gesture = useRef<{
     id: number
@@ -213,5 +231,6 @@ export function useViewer() {
     zoomAtPoint,
     resetToActual,
     jumpToFraction,
+    flyToContent,
   }
 }

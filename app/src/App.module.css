@@ -17,6 +17,14 @@
   pointer-events: auto;
 }
 
+/* 分段导览（mockup 108:3783）：顶栏正中，水平居中不受左右两簇宽度影响 */
+.topCenter {
+  position: absolute;
+  left: 50%;
+  top: 48px;
+  transform: translateX(-50%);
+}
+
 .topRight {
   display: flex;
   gap: 12px;

@@ -4,10 +4,13 @@ import { IconButton } from './components/IconButton/IconButton'
 import { ModeToggle, type ViewMode } from './components/ModeToggle/ModeToggle'
 import { NavBar } from './components/NavBar/NavBar'
 import { ScaleToast } from './components/ScaleControl/ScaleControl'
+import { SegmentNav } from './components/SegmentNav/SegmentNav'
 import { MusicNoteIcon, TranslateIcon, ViewRealSizeIcon } from './components/icons'
 import { Showcase } from './showcase/Showcase'
 import annotationsData from '../annotations.json'
+import segmentsData from '../segments.json'
 import type { Annotation } from './viewer/annotations'
+import { segmentAtX, type Segment } from './viewer/segments'
 import { MarkerLayer } from './viewer/MarkerLayer'
 import { ScrollCanvas } from './viewer/ScrollCanvas'
 import { useViewer } from './viewer/useViewer'
@@ -32,10 +35,22 @@ export default function App() {
 /** 标注数据：用户仍在持续打点，直接改 app/annotations.json 即可热更新 */
 const annotations = annotationsData as unknown as Annotation[]
 
+/** 分段主题数据：标题唯一源（PRD §3.11 禁止 UI 硬编码另一份） */
+const segments = segmentsData as Segment[]
+
 function Viewer() {
   const [mode, setMode] = useState<ViewMode>('learn')
-  const { canvasRef, view, size, dragging, handlers, zoomAtPoint, resetToActual, jumpToFraction } =
-    useViewer()
+  const {
+    canvasRef,
+    view,
+    size,
+    dragging,
+    handlers,
+    zoomAtPoint,
+    resetToActual,
+    jumpToFraction,
+    flyToContent,
+  } = useViewer()
 
   // 视口清晰度（视口内高清瓦片加载比例），驱动顶部细进度条；指示条视觉为占位方案（ui-backlog #7 同类）
   const [clarity, setClarity] = useState(1)
@@ -119,6 +134,20 @@ function Viewer() {
     h: size.h / view.zoom / CONTENT_H,
   }
 
+  // 当前段实时高亮：视口中心 x 落在哪段（PRD §3.11，随平移逐帧切换）
+  const centerContentX = (size.w / 2 - view.tx) / view.zoom
+  const activeSegment = segmentAtX(segments, centerContentX)
+
+  // 点某段 = 运镜到该段开头：视口右缘对齐段右界（手卷右起左收，从段首往左读不漏画面）；
+  // focal_w 仍决定框多宽（为空兜底框满整段），focal_x 不再用于跳转
+  const handleSegmentSelect = useCallback(
+    (seg: Segment) => {
+      const cw = seg.focal_w ?? seg.x_end - seg.x_start
+      flyToContent(seg.x_end - cw / 2, cw)
+    },
+    [flyToContent],
+  )
+
   return (
     <div>
       <AppBackground />
@@ -147,6 +176,9 @@ function Viewer() {
 
       <header className={`${styles.topBar} ${topVisible ? '' : styles.topHidden}`}>
         <ModeToggle value={mode} onChange={setMode} />
+        <div className={styles.topCenter}>
+          <SegmentNav segments={segments} activeId={activeSegment?.id} onSelect={handleSegmentSelect} />
+        </div>
         <div className={styles.topRight}>
           <IconButton icon={<MusicNoteIcon />} label="背景音乐" />
           <IconButton icon={<TranslateIcon />} label="切换语言" />

@@ -15,20 +15,23 @@
   border-radius: var(--radius-sm);
 }
 
+/* 印章相对标题（含多行）垂直居中——用户定稿 2026-07-11 */
 .titleRow {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
+/* 长标题换行（不溢出卡片）；flex 子项需 min-width:0 才允许收缩换行 */
 .title {
   margin: 0;
+  flex: 1;
+  min-width: 0;
   font-family: var(--font-kanji);
   font-size: 22px;
   font-weight: 400;
   line-height: normal;
   color: var(--text-black);
-  white-space: nowrap;
 }
 
 /* 滚动边缘渐隐用的可动画自定义属性（不支持 @property 的浏览器退化为瞬时切换） */

@@ -14,10 +14,12 @@ import {
   CLUSTER_THRESHOLD_PX,
   HOVER_LEAVE_MS,
   MARKER_CULL_MARGIN_PX,
+  MARKER_HIT_SIZE,
   MARKER_INK_MAX,
   MARKER_INK_MIN,
   MARKER_OFFSET,
   MARKER_SIZE,
+  markerGrowth,
   MAX_ZOOM,
   PHYSICAL_1_ZOOM,
   TIER_REVEAL,
@@ -173,10 +175,15 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
     [view.zoom, zoomAtPoint],
   )
 
-  /** UI 元素的事件不冒泡到画布层（marker 现在渲染在画布内部，PRD §3.5 硬规则） */
+  /** UI 元素的事件不冒泡到画布层（PRD §3.5 硬规则）。注意信息卡虽 portal 到 body，
+      React 合成事件仍沿组件树冒泡回画布——pointerdown 一旦漏进画布会触发 setPointerCapture
+      劫持整个指针序列，click 目标变成画布（链接点不动、还会误触单击放大），所以卡片也必须 stop */
   const stop = useCallback((e: React.SyntheticEvent) => e.stopPropagation(), [])
 
   const hoveredSingle = hoveredId !== null ? singles.find((p) => p.a.id === hoveredId) : undefined
+
+  // 高倍缩放温和放大（实物 100% 以内 growth=1，即原固定屏幕像素行为）；单圈与聚合统一
+  const growth = markerGrowth(view.zoom)
 
   // —— 卡片摆放：锚点侧向偏移（右侧优先、不够翻左），渲染后按实测尺寸钳制进可视区 ——
   // 垂直钳制：上缘留 12px（必要时允许压过顶部 UI），下缘避开导航栏；侧向偏移保证任何垂直位移都不遮锚点。
@@ -207,7 +214,8 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
     <>
       <div className={`${styles.layer} ${visible ? '' : styles.layerHidden}`}>
         {singles.map((p) => {
-          const d = MARKER_SIZE[p.a.tier] ?? MARKER_SIZE.场景
+          const d = (MARKER_SIZE[p.a.tier] ?? MARKER_SIZE.场景) * growth
+          const hitSize = MARKER_HIT_SIZE * growth
           const variant = CIRCLE_VARIANTS[p.a.id % CIRCLE_VARIANTS.length]
           // 墨量浓淡：Knuth 乘法哈希（与 id%3 的笔触选择去相关），multiply 下淡=印得浅
           const inkHash = ((p.a.id * 2654435761) >>> 16) % 1024
@@ -217,7 +225,7 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
             <div
               key={p.a.id}
               className={styles.hit}
-              style={{ left: p.sx, top: p.sy }}
+              style={{ left: p.sx, top: p.sy, width: hitSize, height: hitSize }}
               onMouseEnter={() => hoverEnter(p.a.id)}
               onMouseLeave={hoverLeave}
               onPointerDown={stop}
@@ -240,7 +248,7 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
           <div
             key={g.key}
             className={`${styles.hit} ${styles.clusterHit}`}
-            style={{ left: g.cx, top: g.cy }}
+            style={{ left: g.cx, top: g.cy, width: MARKER_HIT_SIZE * growth, height: MARKER_HIT_SIZE * growth }}
             onPointerDown={stop}
             onPointerUp={stop}
             onClick={(e) => {
@@ -250,10 +258,14 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
           >
             <span
               className={styles.cluster}
-              style={{ opacity: g.factor, width: CLUSTER_MARKER_SIZE, height: CLUSTER_MARKER_SIZE }}
+              style={{
+                opacity: g.factor,
+                width: CLUSTER_MARKER_SIZE * growth,
+                height: CLUSTER_MARKER_SIZE * growth,
+              }}
             >
               <img src={clusterBlob} alt="" draggable={false} className={styles.clusterBlob} />
-              <span className={styles.clusterCount}>
+              <span className={styles.clusterCount} style={{ fontSize: 14 * growth }}>
                 {g.members.length <= 9 ? CLUSTER_NUMERALS[g.members.length - 1] : '众'}
               </span>
             </span>
@@ -277,6 +289,8 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
               onMouseLeave={hoverLeave}
               onWheel={stop}
               onClick={stop}
+              onPointerDown={stop}
+              onPointerUp={stop}
             >
               <InfoCard
                 category={categoryOf(hoveredSingle.a)}

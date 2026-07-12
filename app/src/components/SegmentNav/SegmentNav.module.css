@@ -1,0 +1,38 @@
+/* Figma 分段导航 108:3782：纸签 h38 px16 py8 纸面80% 无描边，仅整条两端圆角 2px；
+   激活/悬停 = 透明度提满（2026-07-11 定稿，取代早期"UI红激活态"方案，见 decisions-log） */
+.nav {
+  display: flex;
+  gap: 4px;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 8px 16px;
+  background: var(--paper-80);
+  border: none;
+  border-radius: 0;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-gold);
+  white-space: nowrap;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 150ms ease;
+}
+
+.tab:first-child {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.tab:last-child {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.tab:hover,
+.active {
+  opacity: 1;
+}

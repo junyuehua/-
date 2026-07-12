@@ -7,7 +7,10 @@ import { ListCard } from '../components/ListCard/ListCard'
 import { ModeToggle, type ViewMode } from '../components/ModeToggle/ModeToggle'
 import { NavBar } from '../components/NavBar/NavBar'
 import { ScaleControl, ScaleToast } from '../components/ScaleControl/ScaleControl'
+import { SegmentNav } from '../components/SegmentNav/SegmentNav'
 import { MusicNoteIcon, TranslateIcon, ViewRealSizeIcon } from '../components/icons'
+import segmentsData from '../../segments.json'
+import type { Segment } from '../viewer/segments'
 import circle1 from '../assets/markers/circle-1.svg'
 import circle2 from '../assets/markers/circle-2.svg'
 import circle3 from '../assets/markers/circle-3.svg'
@@ -16,9 +19,13 @@ import styles from './Showcase.module.css'
 
 const CATEGORIES: Category[] = ['arch', 'figure', 'object', 'plant', 'animal']
 
+/** 标题唯一源 segments.json（PRD §3.11 禁止 UI 硬编码另一份） */
+const segments = segmentsData as Segment[]
+
 /** 组件库对照页：访问 /?showcase 查看，用于和 Figma 验收比对 */
 export function Showcase() {
   const [mode, setMode] = useState<ViewMode>('learn')
+  const [activeSegmentId, setActiveSegmentId] = useState(1)
 
   return (
     <>
@@ -43,6 +50,17 @@ export function Showcase() {
         </section>
 
         <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>分段导览 SegmentNav（Figma 108:3782）</h2>
+          <div className={styles.row}>
+            <SegmentNav
+              segments={segments}
+              activeId={activeSegmentId}
+              onSelect={(seg) => setActiveSegmentId(seg.id)}
+            />
+          </div>
+        </section>
+
+        <section className={styles.section}>
           <h2 className={styles.sectionTitle}>分类印章 CategorySeal</h2>
           <div className={styles.row}>
             {CATEGORIES.map((c) => (
@@ -59,6 +77,9 @@ export function Showcase() {
             </InfoCard>
             <InfoCard category="figure" title="送炭人">
               前后一对人正赶着驴队往城内运送木炭。
+            </InfoCard>
+            <InfoCard category="arch" title="孙羊正店孙羊正店孙羊正店">
+              长标题换行对照：标题超出卡宽时折行，左侧印章相对多行标题垂直居中。
             </InfoCard>
           </div>
         </section>
