@@ -1,5 +1,5 @@
+import { PaperTabs } from '../PaperTabs/PaperTabs'
 import type { Segment } from '../../viewer/segments'
-import styles from './SegmentNav.module.css'
 
 interface SegmentNavProps {
   segments: Segment[]
@@ -8,22 +8,19 @@ interface SegmentNavProps {
   onSelect: (segment: Segment) => void
 }
 
+/** 顶栏分段导览（Figma 108:3782）：纸签视觉由 PaperTabs 承担，这里只管段序与跳转 */
 export function SegmentNav({ segments, activeId, onSelect }: SegmentNavProps) {
   // 左→右 = 段5→段1（东京梦华…春郊），镜像画面空间：x 从右 160348 到左 0
   const ordered = [...segments].sort((a, b) => a.x_start - b.x_start)
   return (
-    <nav className={styles.nav} aria-label="分段导览">
-      {ordered.map((seg) => (
-        <button
-          key={seg.id}
-          type="button"
-          aria-current={seg.id === activeId ? 'true' : undefined}
-          className={`${styles.tab} ${seg.id === activeId ? styles.active : ''}`}
-          onClick={() => onSelect(seg)}
-        >
-          {seg.title_zh}
-        </button>
-      ))}
-    </nav>
+    <PaperTabs
+      ariaLabel="分段导览"
+      items={ordered.map((s) => ({ id: s.id, label: s.title_zh }))}
+      activeId={activeId}
+      onSelect={(id) => {
+        const seg = segments.find((s) => s.id === id)
+        if (seg) onSelect(seg)
+      }}
+    />
   )
 }

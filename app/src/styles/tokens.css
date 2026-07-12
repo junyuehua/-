@@ -30,4 +30,5 @@
   /* 字体 */
   --font-kanji: "AaGuDianKeBenSongYMB", "Noto Serif SC", serif;
   --font-serif: "Source Han Serif SC", "Noto Serif SC", serif;
+  --font-shoujin: "ShouJinTi", "Noto Serif SC", serif; /* 瘦金体，仅卷首标题（子集化5字） */
 }

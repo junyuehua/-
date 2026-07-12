@@ -1,0 +1,338 @@
+/* 卷首（Figma 108:3836 / 150:1183）：1225×807 纸页居中，非全屏铺满。
+   wrapper 全屏拦截交互（两种 variant 都不让画布收到事件）；z 高于信息卡层(13)与顶栏(10)。
+   首次进入时 wrapper 内再渲染一份 AppBackground（fixed z:0，在本 stacking context 内解析），
+   opaque 盖住画作与壳层——画布在其下继续预载瓦片。 */
+.wrapper {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  opacity: 1;
+  transition: opacity 400ms ease;
+}
+
+.wrapperHidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 纸页：--paper-80 底 + 宣纸纹理（::before，multiply 只对纸页自身，见 isolation）；
+   小屏收缩到视口内（最小视口 1024×640 时 984×600，左列与中央列仍不重叠） */
+.sheet {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(1225px, calc(100vw - 40px));
+  height: min(807px, calc(100vh - 40px));
+  background: var(--paper-80);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* 首次进入（底色背景）：纸页与视口保持 48px 呼吸边距（2026-07-12 用户拍板）——
+   窗口缩小到触发最小视口门槛之前始终留白；画作出来后（overlay 重开）不适用。
+   宽度方向 1081px 以下让步（最少保 985px 纸页宽 = 左列与中央列不重叠的下限），
+   否则 48 边距会把内部布局压到打架 */
+.sheetFirst {
+  width: min(1225px, max(985px, calc(100vw - 96px)));
+  height: min(807px, calc(100vh - 96px));
+}
+
+/* 宣纸纹理（Figma Paper texture，multiply 进纸）：白底乘法后不改纸色，只留纤维斑点；
+   0.3 不透明度（2026-07-12 用户拍板，0.6 实测偏重） */
+.sheet::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: url('../../assets/intro/paper-texture.jpg');
+  background-size: cover;
+  mix-blend-mode: multiply;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* —— 左列：标题+朱印固定在纸页左（不参与居中）—— */
+.left {
+  position: absolute;
+  left: 48px;
+  top: 48px;
+}
+
+/* 竖排大标题：瘦金体 64px / 行高 1.2 / 字金，每行一字 */
+.title {
+  display: flex;
+  flex-direction: column;
+  width: 64px;
+  margin: 0;
+  font-family: var(--font-shoujin);
+  font-size: 64px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--text-gold);
+  user-select: none;
+}
+
+/* 朱印：83×86，题在标题下方 9px、比标题左移 9px（Figma left 39 vs 48），multiply 进纸 */
+.seal {
+  display: block;
+  margin-left: -9px;
+  margin-top: 9px;
+  mix-blend-mode: multiply;
+  opacity: 0.9;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* —— 中央列：纸页内水平居中、内部左对齐；止步于底部 CTA 区上缘（120px）—— */
+.center {
+  position: absolute;
+  left: 50%;
+  top: 48px;
+  bottom: 120px;
+  transform: translateX(-50%);
+  width: 725px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 正文滚动区：tab 固定，只滚这里；上下边缘渐隐同信息卡（@property 已由 InfoCard.module 注册） */
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  --fade-t: 0px;
+  --fade-b: 0px;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--fade-t),
+    #000 calc(100% - var(--fade-b)),
+    transparent 100%
+  );
+  transition:
+    --fade-t 250ms ease,
+    --fade-b 250ms ease;
+}
+
+.body::-webkit-scrollbar {
+  display: none;
+}
+
+.fadeTop {
+  --fade-t: 36px;
+}
+
+.fadeBottom {
+  --fade-b: 36px;
+}
+
+/* 正文段落：18px / 行高 2.2（注意：信息卡是 2.0）/ 500 / 字黑；段间距全靠行高，无额外 margin */
+.paragraph {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 2.2;
+  color: var(--text-black);
+  white-space: pre-line;
+}
+
+.paragraph a,
+.citationText a {
+  color: var(--ui-red);
+  text-decoration: underline;
+}
+
+/* 金色引用块：同信息卡（2px UI金竖条），字号/行高随卷首正文 */
+.citation {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.citationBar {
+  flex-shrink: 0;
+  width: 2px;
+  border-radius: 5px;
+  background: var(--ui-gold);
+}
+
+.citationText {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 2.2;
+  color: var(--text-gold);
+  white-space: pre-line;
+}
+
+/* —— 底部区：纸页通栏，上 24 / 下 48，CTA 居中，永远压在正文之上 —— */
+.bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  padding: 24px 0 48px;
+  pointer-events: none;
+}
+
+/* CTA 展阅（110:3601）：UI红 / 白字 22px Bold / 字距 3.3px / p 8×32 / 圆角 2 */
+.cta {
+  pointer-events: auto;
+  padding: 8px 32px;
+  background: var(--ui-red);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 3.3px;
+  color: var(--text-white);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+
+/* hover 态 Figma 未给：先用轻微加深，终稿出来再调 */
+.cta:hover {
+  filter: brightness(0.95);
+}
+
+/* 重开形态的 CTA「关闭」（152:1270）：UI金底 + 字金，几何与「展阅」相同 */
+.ctaClose {
+  background: var(--ui-gold);
+  color: var(--text-gold);
+}
+
+/* 重开形态：纸页外的背景可点击关闭，光标给出提示 */
+.wrapperDismiss {
+  cursor: pointer;
+}
+
+.wrapperDismiss .sheet {
+  cursor: auto;
+}
+
+/* —— 首次进入的墨染入场（2026-07-12 三版：合成器纯动画，根治尾段顿挫）——
+   二版用动画 mask-size 做扩散：mask 属主线程属性、每帧重光栅化且栅格随扩散越来越大，
+   尾段（四角、亚像素推进）任何掉帧都读成台阶——架构性顿挫，调参无解。
+   三版改为四层**静态**墨斑（同一 ink-blob.png，不同固定 mask-size）错峰淡入：
+   mask 各自只光栅化一次，全程只动 opacity/filter（合成器动画）——原理上不可能卡。
+   观感从"边缘推进"变为"层层洇透"（墨透纸背），更接近湿纸吸墨。
+   底图独享 400ms 静场保留；内容整体聚焦浮现（不分批，2026-07-12 暂缓分批）。
+   只做首次；重开走 wrapper 的普通 400ms 淡入，随取随用不摆仪式 */
+
+/* 首次进入时纸页本体不出面：纸面交给 stage 层（stage4 = 终态纸面），
+   否则半透明纸底会在墨斑之外先隐约成形 */
+.wrapperFirst .sheet {
+  background: none;
+}
+
+.wrapperFirst .sheet::before {
+  content: none; /* 宣纸纹理移交 stage4::before */
+}
+
+/* 生长窗口（四版核心）：实色纸层 + 静态墨斑 mask，动画 transform:scale 0.12→3.12 连续生长。
+   纸面用**预合成实色**——纸 80% × 首次底图（恒定的莲花墙）中值 ≈ #DED5C7（花纹透出
+   0.12×0.2≈2.4% 不可见）。关键洞察：**纯色填充缩放不变**——放大实色层肉眼无感，
+   只有 mask 的墨形边缘在生长；transform 走合成器、mask 只光栅化一次 → 连续且不掉帧。
+   羽化边随生长同步变宽，物理上正像洇墨。
+   scale 终值 3.12：墨斑实心核（0.2313×图幅）恰好盖满纸页对角（覆盖点 ≈3.06，
+   与纸页尺寸无关——mask 随窗口同比例拉伸） */
+.inkWindow {
+  position: absolute;
+  inset: 0;
+  background: #ded5c7;
+  mask-image: url('../../assets/intro/ink-blob.png');
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: 100% 100%;
+  transform-origin: 50% 50%;
+  will-change: transform;
+  /* fill 必须 both：backwards 管 400ms 延迟期的隐藏，forwards 把终帧 scale(3.12) 钉住——
+     只用 backwards 时动画一结束会弹回静态 scale(1)，墨斑重新罩住中心、四周露暗底（已踩过） */
+  animation: windowGrow 2600ms 400ms both;
+}
+
+@keyframes windowGrow {
+  0% {
+    opacity: 0;
+    transform: scale(0.12);
+    animation-timing-function: cubic-bezier(0.2, 0.55, 0.35, 1); /* 洇开段：起势快、渐收 */
+  }
+  15% {
+    opacity: 1;
+  }
+  55% {
+    transform: scale(1.7);
+    animation-timing-function: cubic-bezier(0.33, 0.25, 0.45, 1); /* 渗满段：缓缓浸透 */
+  }
+  100% {
+    opacity: 1;
+    transform: scale(3.12);
+  }
+}
+
+/* 宣纸纹理独立淡入（multiply 乘在生长中的纸面上；0→0.3 渐进，到场不可察） */
+.inkTexture {
+  position: absolute;
+  inset: 0;
+  background-image: url('../../assets/intro/paper-texture.jpg');
+  background-size: cover;
+  mix-blend-mode: multiply;
+  opacity: 0.3;
+  pointer-events: none;
+  animation: textureIn 1600ms ease-out 1200ms backwards;
+}
+
+@keyframes textureIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.3;
+  }
+}
+
+/* 内容整体聚焦浮现（opacity+blur 均为合成器属性）；文字抗锯齿的"落定"发生在
+   墨仍在洇的 2.3s 处，被动势盖过 */
+.wrapperFirst .left,
+.wrapperFirst .center,
+.wrapperFirst .bottom {
+  animation: contentFocus 1400ms ease-out 900ms backwards;
+}
+
+@keyframes contentFocus {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+/* 无障碍：偏好减少动效时全部立即就位，只留 wrapper 自身的普通淡入。
+   注意 .inkWindow 静态 transform 为 scale(1)、盖不满纸页——必须同时去掉 mask */
+@media (prefers-reduced-motion: reduce) {
+  .inkWindow,
+  .inkTexture,
+  .wrapperFirst .left,
+  .wrapperFirst .center,
+  .wrapperFirst .bottom {
+    animation: none;
+  }
+
+  .inkWindow {
+    mask-image: none;
+  }
+}

@@ -1,4 +1,4 @@
-/* Figma 分段导航 108:3782：纸签 h38 px16 py8 纸面80% 无描边，仅整条两端圆角 2px；
+/* Figma 分段导航 108:3782 / 卷首 148:1237：纸签 h38 px16 py8 无描边，仅整条两端圆角 2px；
    激活/悬停 = 透明度提满（2026-07-11 定稿，取代早期"UI红激活态"方案，见 decisions-log） */
 .nav {
   display: flex;
@@ -17,11 +17,17 @@
   font-family: var(--font-serif);
   font-size: 14px;
   font-weight: 700;
+  letter-spacing: 0.7px;
   color: var(--text-gold);
   white-space: nowrap;
   cursor: pointer;
   opacity: 0.6;
   transition: opacity 150ms ease;
+}
+
+/* 卷首用实心纸面（覆盖层本身已是纸面 80%，纸签再半透明会叠出深浅差） */
+.solid {
+  background: var(--paper);
 }
 
 .tab:first-child {

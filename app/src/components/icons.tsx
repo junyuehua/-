@@ -1,4 +1,5 @@
 import type { SVGProps } from 'react'
+import AutoStories from '@material-symbols/svg-400/outlined/auto_stories.svg?react'
 import MusicNote from '@material-symbols/svg-400/outlined/music_note.svg?react'
 import MusicOff from '@material-symbols/svg-400/outlined/music_off.svg?react'
 import ViewRealSize from '@material-symbols/svg-400/outlined/view_real_size.svg?react'
@@ -15,6 +16,7 @@ function withIconDefaults(Icon: React.FC<SVGProps<SVGSVGElement>>) {
   }
 }
 
+export const AutoStoriesIcon = withIconDefaults(AutoStories)
 export const MusicNoteIcon = withIconDefaults(MusicNote)
 export const MusicOffIcon = withIconDefaults(MusicOff)
 export const ViewRealSizeIcon = withIconDefaults(ViewRealSize)

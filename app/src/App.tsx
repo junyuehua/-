@@ -4,9 +4,10 @@ import { IconButton } from './components/IconButton/IconButton'
 import { ModeToggle, type ViewMode } from './components/ModeToggle/ModeToggle'
 import { NavBar } from './components/NavBar/NavBar'
 import { ScaleToast } from './components/ScaleControl/ScaleControl'
+import { ScrollIntro } from './components/ScrollIntro/ScrollIntro'
 import { SegmentNav } from './components/SegmentNav/SegmentNav'
 import { ViewportGate } from './components/ViewportGate/ViewportGate'
-import { MusicNoteIcon, MusicOffIcon, ViewRealSizeIcon } from './components/icons'
+import { AutoStoriesIcon, MusicNoteIcon, MusicOffIcon, ViewRealSizeIcon } from './components/icons'
 import { Showcase } from './showcase/Showcase'
 import annotationsData from '../annotations.json'
 import segmentsData from '../segments.json'
@@ -58,6 +59,26 @@ function Viewer() {
   // 视口清晰度（视口内高清瓦片加载比例），驱动顶部细进度条；指示条视觉为占位方案（ui-backlog #7 同类）
   const [clarity, setClarity] = useState(1)
   const handleClarity = useCallback((ratio: number) => setClarity(ratio), [])
+
+  // —— 卷首（Figma 108:3836）：每次加载默认打开，无持久化；点「展阅」淡出 400ms 后卸载，顶栏可重开 ——
+  // 首次进入 = 'first' variant（opaque 底图盖住画作，壳层 UI 全隐藏、音乐不可达）；
+  // firstVisit 在首次关闭"开始"时就置 false——壳层在纸页 400ms 淡出期间同步滑入；
+  // variant 用 ref 在整个 open→closing 周期内保持不变，莲花底图随纸页一起淡走、平滑露出画作
+  const [introState, setIntroState] = useState<'open' | 'closing' | 'closed'>('open')
+  const [firstVisit, setFirstVisit] = useState(true)
+  const introVariant = useRef<'first' | 'overlay'>('first')
+  const introTimer = useRef<number | undefined>(undefined)
+  const closeIntro = useCallback(() => {
+    setIntroState('closing')
+    setFirstVisit(false)
+    window.clearTimeout(introTimer.current)
+    introTimer.current = window.setTimeout(() => setIntroState('closed'), 400)
+  }, [])
+  const reopenIntro = useCallback(() => {
+    introVariant.current = 'overlay'
+    window.clearTimeout(introTimer.current)
+    setIntroState('open')
+  }, [])
 
   // —— 背景音乐：默认不播放；首次点击从头播放，再点暂停，下次点击从暂停处续播（循环）——
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -143,8 +164,9 @@ function Viewer() {
     }
   }, [mode])
 
-  const topVisible = mode === 'learn' || topHover
-  const bottomVisible = mode === 'learn' || bottomHover
+  // 首次进入期间（点过一次「展阅」之前）壳层 UI 全部隐藏（模式/分段导览/音乐/卷首/导航条）
+  const topVisible = (mode === 'learn' || topHover) && !firstVisit
+  const bottomVisible = (mode === 'learn' || bottomHover) && !firstVisit
 
   // 实物比例：100% = 画在屏幕上呈现真实物理大小（画高 24.8cm）
   const physicalRatio = view.zoom / PHYSICAL_1_ZOOM
@@ -208,7 +230,7 @@ function Viewer() {
       </ScrollCanvas>
 
       <div
-        className={`${styles.clarityBar} ${clarity < 1 ? styles.clarityBarVisible : ''}`}
+        className={`${styles.clarityBar} ${clarity < 1 && !firstVisit ? styles.clarityBarVisible : ''}`}
         style={{ width: `${clarity * 100}%` }}
       />
 
@@ -219,6 +241,7 @@ function Viewer() {
         </div>
         {/* 语言切换按钮移出 MVP（英文支持下个版本再做）；音乐 off 态用 Google music_off 图标 */}
         <div className={styles.topRight}>
+          <IconButton icon={<AutoStoriesIcon />} label="卷首" onClick={reopenIntro} />
           <IconButton
             icon={musicOn ? <MusicNoteIcon /> : <MusicOffIcon />}
             label={musicOn ? '暂停背景音乐' : '播放背景音乐'}
@@ -245,6 +268,15 @@ function Viewer() {
       <div className={`${styles.bottomBar} ${bottomVisible ? '' : styles.bottomHidden}`}>
         <NavBar viewport={viewport} onJump={jumpToFraction} />
       </div>
+
+      {/* 卷首：z 最高，wrapper 拦截画布交互；closed 后卸载 */}
+      {introState !== 'closed' && (
+        <ScrollIntro
+          variant={introVariant.current}
+          visible={introState === 'open'}
+          onClose={closeIntro}
+        />
+      )}
     </div>
   )
 }

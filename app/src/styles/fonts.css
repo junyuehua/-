@@ -5,3 +5,15 @@
   font-style: normal;
   font-display: swap;
 }
+
+/* 宋徽宗瘦金体：只用于卷首大标题「清明上河图」——已子集化为这 5 个字（1.8KB）。
+   若标题文案要改，用 Fonts/宋徽宗瘦金体.ttf 重跑：
+   python3 -m fontTools.subset Fonts/宋徽宗瘦金体.ttf --text=<新文案> --flavor=woff2 \
+     --output-file=app/src/assets/fonts/ShouJinTi-juanshou.woff2 */
+@font-face {
+  font-family: "ShouJinTi";
+  src: url("../assets/fonts/ShouJinTi-juanshou.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
