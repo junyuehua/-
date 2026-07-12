@@ -1,7 +1,7 @@
+/* 标注层：渲染在画布内部（与绢本同 stacking context，multiply 才生效），盖满画布 */
 .layer {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 5;
   pointer-events: none;
   opacity: 1;
   transition: opacity 400ms ease;
@@ -9,63 +9,90 @@
 
 .layerHidden {
   opacity: 0;
-  pointer-events: none;
 }
 
 .layerHidden * {
   pointer-events: none !important;
 }
 
-/* 点击热区：比可见圆点大一圈，marker 视觉消失时热区依然生效（PRD §3.8） */
+/* 点击热区：比可见圈大一圈，marker 视觉消失时热区依然生效（PRD §3.8）。
+   mix-blend-multiply 必须放在这一层——.hit 自带 transform（stacking context），
+   若放在子元素上会被隔离、乘在透明背景上等于失效（就是"浮于纸面"问题的根源）。
+   聚合的白色汉字在整体 multiply 下自然变成"留白负形透出绢底"（PRD §3.8 预期效果） */
 .hit {
   position: absolute;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: auto;
   cursor: pointer;
+  mix-blend-mode: multiply;
 }
 
-/* 静止态圆点（2026-07-11 定稿「柔边模糊」：blur 2px / 透明度 0.6，用户实调选定）：
-   边缘晕开如墨点，呼吸动效带缩放 + 明暗起伏（PRD §3.8 不做死板实心点） */
-.dot {
-  border-radius: 50%;
-  background-color: var(--dot-c);
-  filter: blur(2px);
-  opacity: 0.6;
-  animation: breathe 4.8s ease-in-out infinite;
+/* 悬停聚合＝"放大看"的入口：光标变放大镜，不出列表（PRD §3.8） */
+.clusterHit {
+  cursor: zoom-in;
+}
+
+/* 手绘朱圈：单色朱红、无 idle 动画（2026-07-11 取消呼吸）；?raw 内联渲染以便样式化笔触路径 */
+.circle {
+  display: block;
   transition: opacity 160ms ease;
+  user-select: none;
 }
 
-@keyframes breathe {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.5;
-  }
-  50% {
-    transform: scale(1.25);
-    opacity: 0.75;
-  }
+.circle svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-/* 悬停：marker 视觉淡出，被信息卡取代（交互热区保留）；!important 压过呼吸动画的 opacity */
-.dotHidden {
+/* 细节小圈（12px）加粗：给笔触路径叠同色描边，避免又小又细看不清。
+   注意别加太厚——圈心闭合会读成"实心"、与聚合标记语义撞车（PRD §3.8 实心=内容多）。
+   stroke 单位=SVG user units（viewBox 约 18-21 宽），0.7 ≈ 12px 显示下环厚 +0.9px */
+.circleThick svg path {
+  stroke: #8a2e1e;
+  stroke-width: 0.7px;
+}
+
+/* 悬停：marker 视觉淡出，被信息卡取代（交互热区保留） */
+.markerHidden {
   opacity: 0 !important;
-  animation: none;
 }
 
-.clusterIcon {
-  opacity: 0.6;
-  filter: blur(1.2px) drop-shadow(0 0 2px rgba(30, 39, 50, 0.35));
-  animation: breathe 4.8s ease-in-out infinite;
+/* 聚合标记：实心朱圈 + 汉字计数负形（一…九/众），单一固定尺寸；multiply 由 .hit 层统一处理 */
+.cluster {
+  position: relative;
+  display: block;
   transition: opacity 160ms ease;
 }
 
-/* 卡片层：独立于 marker 层，z 高于顶/底 UI（10/11）——边缘钳制后仍不够时直接压过 UI */
+.clusterBlob {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.clusterCount {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-kanji);
+  font-size: 14px;
+  line-height: 1;
+  color: var(--text-white);
+  user-select: none;
+}
+
+/* 卡片层：portal 到 body，z 高于顶/底 UI（10/11）——边缘钳制后仍不够时直接压过 UI */
 .cardLayer {
   position: fixed;
   inset: 0;

@@ -1,27 +1,54 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { InfoCard } from '../components/InfoCard/InfoCard'
-import { ListCard } from '../components/ListCard/ListCard'
+import circle1Raw from '../assets/markers/circle-1.svg?raw'
+import circle2Raw from '../assets/markers/circle-2.svg?raw'
+import circle3Raw from '../assets/markers/circle-3.svg?raw'
+import clusterBlob from '../assets/markers/cluster-blob.svg'
 import {
   CARD_OFFSET_PX,
   CARD_VIEWPORT_MARGIN_PX,
   CLICK_ZOOM_FACTOR,
   CLUSTER_MARKER_SIZE,
+  CLUSTER_NUMERALS,
   CLUSTER_THRESHOLD_PX,
   HOVER_LEAVE_MS,
   MARKER_CULL_MARGIN_PX,
+  MARKER_INK_MAX,
+  MARKER_INK_MIN,
   MARKER_OFFSET,
   MARKER_SIZE,
   MAX_ZOOM,
+  PHYSICAL_1_ZOOM,
+  TIER_REVEAL,
 } from './constants'
-import { CATEGORY_COLOR, categoryOf, type Annotation } from './annotations'
+import { categoryOf, type Annotation } from './annotations'
 import type { ViewState } from './useViewer'
 import styles from './MarkerLayer.module.css'
+
+/** 三种手绘朱圈（Figma 标记 106:3698），按点位 id 稳定随机分配，让画面笔触有变化不死板。
+    用 ?raw 内联渲染（而非 <img>）：细节小圈需要给笔触路径叠同色描边保证粗度，外链图片无法样式化 */
+const CIRCLE_VARIANTS = [
+  { raw: circle1Raw, aspect: 21.0105 / 19.8224 },
+  { raw: circle2Raw, aspect: 17.8501 / 18.037 },
+  { raw: circle3Raw, aspect: 17.2631 / 18.2047 },
+]
+
+/** 分层显隐：返回 0-1 的可见度（淡入区间内线性过渡），0 = 不渲染也不参与聚合 */
+function tierFactor(tier: Annotation['tier'], zoom: number): number {
+  const reveal = TIER_REVEAL[tier]
+  if (!reveal) return 1
+  const ratio = zoom / PHYSICAL_1_ZOOM
+  return Math.min(1, Math.max(0, (ratio - reveal.start) / (reveal.end - reveal.start)))
+}
 
 interface Placed {
   a: Annotation
   /** 锚点屏幕坐标（含 pan/zoom 变换，不含 marker 偏移） */
   sx: number
   sy: number
+  /** 分层显隐可见度（透明度乘子） */
+  factor: number
 }
 
 interface ClusterGroup {
@@ -29,9 +56,8 @@ interface ClusterGroup {
   cx: number
   cy: number
   members: Placed[]
+  factor: number
 }
-
-type Hovered = { type: 'marker'; id: number } | { type: 'cluster'; key: string } | null
 
 interface MarkerLayerProps {
   annotations: Annotation[]
@@ -43,24 +69,31 @@ interface MarkerLayerProps {
   zoomAtPoint: (ax: number, ay: number, zoom: number, animate: boolean) => void
 }
 
+/**
+ * 标注层：朱笔圈点。必须渲染在 ScrollCanvas 内部（与画面同一 stacking context），
+ * mix-blend-multiply 的"进绢"质感才能与下方绢本相乘生效；信息卡通过 portal 渲染到
+ * body（独立高 z 层，不参与混合、可压过顶部 UI）。
+ */
 export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: MarkerLayerProps) {
-  const [hovered, setHovered] = useState<Hovered>(null)
+  const [hoveredId, setHoveredId] = useState<number | null>(null)
   const leaveTimer = useRef<number | undefined>(undefined)
 
   // —— marker 与卡片共享悬停态：进入即取消隐藏计时，离开 280ms 后才判定真正离开（PRD §3.8）——
-  const hoverEnter = useCallback((h: Exclude<Hovered, null>) => {
+  const hoverEnter = useCallback((id: number) => {
     window.clearTimeout(leaveTimer.current)
-    setHovered(h)
+    setHoveredId(id)
   }, [])
   const hoverLeave = useCallback(() => {
     window.clearTimeout(leaveTimer.current)
-    leaveTimer.current = window.setTimeout(() => setHovered(null), HOVER_LEAVE_MS)
+    leaveTimer.current = window.setTimeout(() => setHoveredId(null), HOVER_LEAVE_MS)
   }, [])
 
-  // —— 投影到屏幕 + 视口裁剪 + 聚合 ——
+  // —— 投影到屏幕 + 分层显隐过滤 + 视口裁剪 + 聚合 ——
   const { singles, clusters } = useMemo(() => {
     const placed: Placed[] = []
     for (const a of annotations) {
+      const factor = tierFactor(a.tier, view.zoom)
+      if (factor <= 0.01) continue
       const sx = a.x * view.zoom + view.tx + MARKER_OFFSET.x
       const sy = a.y * view.zoom + view.ty + MARKER_OFFSET.y
       if (
@@ -71,7 +104,7 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
       ) {
         continue
       }
-      placed.push({ a, sx, sy })
+      placed.push({ a, sx, sy, factor })
     }
 
     // 地标层不参与聚合（PRD §3.8）；场景/细节按屏幕像素距离贪心归簇
@@ -92,8 +125,9 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
         best.members.push(p)
         best.cx = best.members.reduce((s, m) => s + m.sx, 0) / best.members.length
         best.cy = best.members.reduce((s, m) => s + m.sy, 0) / best.members.length
+        best.factor = Math.max(best.factor, p.factor)
       } else {
-        groups.push({ key: '', cx: p.sx, cy: p.sy, members: [p] })
+        groups.push({ key: '', cx: p.sx, cy: p.sy, members: [p], factor: p.factor })
       }
     }
     const clusters: ClusterGroup[] = []
@@ -108,34 +142,17 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
     return { singles, clusters }
   }, [annotations, view, size])
 
-  // —— 交互：点击 = 精确凑近锚点（复用画布单击放大的锚定数学，PRD §3.5/§3.8）——
+  // —— 点击 = 精确凑近锚点（复用画布单击放大的锚定数学，PRD §3.5/§3.8）——
   const zoomToAnchor = useCallback(
-    (a: Annotation, targetZoom?: number) => {
+    (a: Annotation) => {
       const ax = a.x * view.zoom + view.tx
       const ay = a.y * view.zoom + view.ty
-      zoomAtPoint(ax, ay, targetZoom ?? view.zoom * CLICK_ZOOM_FACTOR, true)
+      zoomAtPoint(ax, ay, view.zoom * CLICK_ZOOM_FACTOR, true)
     },
     [view, zoomAtPoint],
   )
 
-  /** 聚合列表项点击：目标倍数保证该点会超过拆散阈值独立显示（PRD §3.8） */
-  const zoomToClusterMember = useCallback(
-    (g: ClusterGroup, m: Placed) => {
-      let minDist = Infinity
-      for (const other of g.members) {
-        if (other.a.id === m.a.id) continue
-        const d = Math.hypot(other.a.x - m.a.x, other.a.y - m.a.y)
-        if (d < minDist) minDist = d
-      }
-      const needed = minDist === Infinity ? view.zoom : (CLUSTER_THRESHOLD_PX * 1.3) / minDist
-      const target = Math.min(MAX_ZOOM, Math.max(view.zoom * CLICK_ZOOM_FACTOR, needed))
-      setHovered(null)
-      zoomToAnchor(m.a, target)
-    },
-    [view.zoom, zoomToAnchor],
-  )
-
-  /** 直接点击聚合标记：运镜放大靠近这片区域，直到聚合自然拆开（PRD §3.8） */
+  /** 唯一的聚合点击路径：以聚合为中心运镜放大，直到超过裂散阈值自然裂开（PRD §3.8） */
   const zoomIntoCluster = useCallback(
     (g: ClusterGroup) => {
       let maxDist = 0
@@ -148,140 +165,129 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
           if (d > maxDist) maxDist = d
         }
       }
-      const needed = maxDist === 0 ? view.zoom * CLICK_ZOOM_FACTOR : (CLUSTER_THRESHOLD_PX * 1.25) / maxDist
+      const needed =
+        maxDist === 0 ? view.zoom * CLICK_ZOOM_FACTOR : (CLUSTER_THRESHOLD_PX * 1.25) / maxDist
       const target = Math.min(MAX_ZOOM, Math.max(view.zoom * CLICK_ZOOM_FACTOR, needed))
-      setHovered(null)
       zoomAtPoint(g.cx, g.cy, target, true)
     },
     [view.zoom, zoomAtPoint],
   )
 
-  const hoveredSingle =
-    hovered?.type === 'marker' ? singles.find((p) => p.a.id === hovered.id) : undefined
-  const hoveredCluster =
-    hovered?.type === 'cluster' ? clusters.find((g) => g.key === hovered.key) : undefined
+  /** UI 元素的事件不冒泡到画布层（marker 现在渲染在画布内部，PRD §3.5 硬规则） */
+  const stop = useCallback((e: React.SyntheticEvent) => e.stopPropagation(), [])
+
+  const hoveredSingle = hoveredId !== null ? singles.find((p) => p.a.id === hoveredId) : undefined
 
   // —— 卡片摆放：锚点侧向偏移（右侧优先、不够翻左），渲染后按实测尺寸钳制进可视区 ——
   // 垂直钳制：上缘留 12px（必要时允许压过顶部 UI），下缘避开导航栏；侧向偏移保证任何垂直位移都不遮锚点。
   // 锚点"保护区"的精确算法待定（PRD §8）。
   const cardRef = useRef<HTMLDivElement>(null)
-  const anchorX = hoveredSingle?.sx ?? hoveredCluster?.cx
-  const anchorY = hoveredSingle?.sy ?? hoveredCluster?.cy
 
   useLayoutEffect(() => {
     const el = cardRef.current
-    if (!el || anchorX === undefined || anchorY === undefined) return
+    if (!el || !hoveredSingle) return
     const rect = el.getBoundingClientRect()
     const navH = size.w * 0.044 // 底部导航栏高度（4.4vw）
-    let left = anchorX + CARD_OFFSET_PX
+    let left = hoveredSingle.sx + CARD_OFFSET_PX
     if (left + rect.width + CARD_VIEWPORT_MARGIN_PX > size.w) {
-      left = anchorX - CARD_OFFSET_PX - rect.width
+      left = hoveredSingle.sx - CARD_OFFSET_PX - rect.width
     }
-    left = Math.max(CARD_VIEWPORT_MARGIN_PX, Math.min(left, size.w - rect.width - CARD_VIEWPORT_MARGIN_PX))
-    let top = anchorY - rect.height / 2
+    left = Math.max(
+      CARD_VIEWPORT_MARGIN_PX,
+      Math.min(left, size.w - rect.width - CARD_VIEWPORT_MARGIN_PX),
+    )
+    let top = hoveredSingle.sy - rect.height / 2
     const maxTop = size.h - navH - CARD_VIEWPORT_MARGIN_PX - rect.height
     top = Math.max(CARD_VIEWPORT_MARGIN_PX, Math.min(top, maxTop))
     el.style.left = `${left}px`
     el.style.top = `${top}px`
-  }, [anchorX, anchorY, size, hovered])
+  }, [hoveredSingle, size])
 
   return (
     <>
       <div className={`${styles.layer} ${visible ? '' : styles.layerHidden}`}>
         {singles.map((p) => {
-        const d = MARKER_SIZE[p.a.tier] ?? MARKER_SIZE.场景
-        const isHovered = hovered?.type === 'marker' && hovered.id === p.a.id
-        return (
-          <div
-            key={p.a.id}
-            className={styles.hit}
-            style={{ left: p.sx, top: p.sy }}
-            onMouseEnter={() => hoverEnter({ type: 'marker', id: p.a.id })}
-            onMouseLeave={hoverLeave}
-            onClick={() => zoomToAnchor(p.a)}
-          >
-            <span
-              className={`${styles.dot} ${isHovered ? styles.dotHidden : ''}`}
-              style={{
-                width: d,
-                height: d,
-                '--dot-c': CATEGORY_COLOR[categoryOf(p.a)],
-              } as React.CSSProperties}
-            />
-          </div>
-        )
-      })}
+          const d = MARKER_SIZE[p.a.tier] ?? MARKER_SIZE.场景
+          const variant = CIRCLE_VARIANTS[p.a.id % CIRCLE_VARIANTS.length]
+          // 墨量浓淡：Knuth 乘法哈希（与 id%3 的笔触选择去相关），multiply 下淡=印得浅
+          const inkHash = ((p.a.id * 2654435761) >>> 16) % 1024
+          const ink = MARKER_INK_MIN + (MARKER_INK_MAX - MARKER_INK_MIN) * (inkHash / 1023)
+          const isHovered = hoveredId === p.a.id
+          return (
+            <div
+              key={p.a.id}
+              className={styles.hit}
+              style={{ left: p.sx, top: p.sy }}
+              onMouseEnter={() => hoverEnter(p.a.id)}
+              onMouseLeave={hoverLeave}
+              onPointerDown={stop}
+              onPointerUp={stop}
+              onClick={(e) => {
+                e.stopPropagation()
+                zoomToAnchor(p.a)
+              }}
+            >
+              <span
+                className={`${styles.circle} ${p.a.tier === '细节' ? styles.circleThick : ''} ${isHovered ? styles.markerHidden : ''}`}
+                style={{ height: d, width: d * variant.aspect, opacity: p.factor * ink }}
+                dangerouslySetInnerHTML={{ __html: variant.raw }}
+              />
+            </div>
+          )
+        })}
 
-      {clusters.map((g) => {
-        const cats = new Set(g.members.map((m) => categoryOf(m.a)))
-        // 聚合标记默认中性纸面色；恰好全员同分类才用分类色（PRD §3.8）
-        const fill = cats.size === 1 ? CATEGORY_COLOR[[...cats][0]] : 'var(--paper)'
-        const isHovered = hovered?.type === 'cluster' && hovered.key === g.key
-        return (
+        {clusters.map((g) => (
           <div
             key={g.key}
-            className={styles.hit}
+            className={`${styles.hit} ${styles.clusterHit}`}
             style={{ left: g.cx, top: g.cy }}
-            onMouseEnter={() => hoverEnter({ type: 'cluster', key: g.key })}
-            onMouseLeave={hoverLeave}
-            onClick={() => zoomIntoCluster(g)}
+            onPointerDown={stop}
+            onPointerUp={stop}
+            onClick={(e) => {
+              e.stopPropagation()
+              zoomIntoCluster(g)
+            }}
           >
-            <svg
-              className={`${styles.clusterIcon} ${isHovered ? styles.dotHidden : ''}`}
-              width={CLUSTER_MARKER_SIZE}
-              height={CLUSTER_MARKER_SIZE * (21 / 22)}
-              viewBox="0 0 22 21"
+            <span
+              className={styles.cluster}
+              style={{ opacity: g.factor, width: CLUSTER_MARKER_SIZE, height: CLUSTER_MARKER_SIZE }}
             >
-              <circle cx="5" cy="16" r="5" fill={fill} />
-              <circle cx="17" cy="16" r="5" fill={fill} />
-              <circle cx="11" cy="5" r="5" fill={fill} />
-            </svg>
+              <img src={clusterBlob} alt="" draggable={false} className={styles.clusterBlob} />
+              <span className={styles.clusterCount}>
+                {g.members.length <= 9 ? CLUSTER_NUMERALS[g.members.length - 1] : '众'}
+              </span>
+            </span>
           </div>
-        )
-      })}
-
+        ))}
       </div>
 
-      {/* 卡片独立于 marker 层：z 高于顶部 UI（允许压过），marker 本身仍在导航栏之下 */}
-      {visible && (hoveredSingle || hoveredCluster) && (
-        <div className={styles.cardLayer}>
-          <div
-            ref={cardRef}
-            className={styles.card}
-            style={{
-              left: (anchorX ?? 0) + CARD_OFFSET_PX,
-              top: Math.max(CARD_VIEWPORT_MARGIN_PX, (anchorY ?? 0) - 160),
-            }}
-            onMouseEnter={() =>
-              hoverEnter(
-                hoveredSingle
-                  ? { type: 'marker', id: hoveredSingle.a.id }
-                  : { type: 'cluster', key: hoveredCluster!.key },
-              )
-            }
-            onMouseLeave={hoverLeave}
-            onWheel={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {hoveredSingle ? (
+      {/* 卡片 portal 到 body：独立于画布 stacking context，z 高于顶部 UI（允许压过） */}
+      {visible &&
+        hoveredSingle &&
+        createPortal(
+          <div className={styles.cardLayer}>
+            <div
+              ref={cardRef}
+              className={styles.card}
+              style={{
+                left: hoveredSingle.sx + CARD_OFFSET_PX,
+                top: Math.max(CARD_VIEWPORT_MARGIN_PX, hoveredSingle.sy - 160),
+              }}
+              onMouseEnter={() => hoverEnter(hoveredSingle.a.id)}
+              onMouseLeave={hoverLeave}
+              onWheel={stop}
+              onClick={stop}
+            >
               <InfoCard
                 category={categoryOf(hoveredSingle.a)}
                 title={hoveredSingle.a.title_zh || '（未命名）'}
               >
                 {hoveredSingle.a.body_zh}
               </InfoCard>
-            ) : (
-              <ListCard
-                items={hoveredCluster!.members.map((m) => ({
-                  category: categoryOf(m.a),
-                  label: m.a.title_zh || '（未命名）',
-                  onClick: () => zoomToClusterMember(hoveredCluster!, m),
-                }))}
-              />
-            )}
-          </div>
-        </div>
-      )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </>
   )
 }

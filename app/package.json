@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@fontsource/noto-serif-sc": "^5.2.9",
+    "@material-symbols/svg-400": "^0.45.7",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
@@ -21,6 +22,7 @@
     "@vitejs/plugin-react": "^6.0.3",
     "oxlint": "^1.71.0",
     "typescript": "~6.0.2",
-    "vite": "^8.1.1"
+    "vite": "^8.1.1",
+    "vite-plugin-svgr": "^5.2.0"
   }
 }

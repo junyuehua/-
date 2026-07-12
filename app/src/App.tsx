@@ -129,19 +129,20 @@ function Viewer() {
         canvasRef={canvasRef}
         handlers={handlers}
         onClarity={handleClarity}
-      />
+      >
+        {/* 标注层在画布内部：与绢本同 stacking context，朱圈的 multiply 混合才生效 */}
+        <MarkerLayer
+          annotations={annotations}
+          view={view}
+          size={size}
+          visible={mode === 'learn'}
+          zoomAtPoint={zoomAtPoint}
+        />
+      </ScrollCanvas>
 
       <div
         className={`${styles.clarityBar} ${clarity < 1 ? styles.clarityBarVisible : ''}`}
         style={{ width: `${clarity * 100}%` }}
-      />
-
-      <MarkerLayer
-        annotations={annotations}
-        view={view}
-        size={size}
-        visible={mode === 'learn'}
-        zoomAtPoint={zoomAtPoint}
       />
 
       <header className={`${styles.topBar} ${topVisible ? '' : styles.topHidden}`}>

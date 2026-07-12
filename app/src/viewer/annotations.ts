@@ -1,6 +1,6 @@
 import type { Category } from '../components/CategorySeal/CategorySeal'
 
-/** 标注点位 schema（PRD §4；坐标 = 真实完整卷轴分辨率 160348×7595 的 content-space 像素） */
+/** 标注点位 schema（PRD §4；坐标 = 真实完整卷轴分辨率 160348×7435 的 content-space 像素） */
 export interface Annotation {
   id: number
   x: number
@@ -9,6 +9,7 @@ export interface Annotation {
   tier: '地标' | '场景' | '细节'
   title_zh: string
   title_en: string
+  /** 正文；Markdown 约定：以 > 开头的行 = 金色引用块（空行分段），[文字](url) = 行内链接（PRD §4） */
   body_zh: string
   body_en: string
 }
@@ -31,11 +32,5 @@ export function categoryOf(a: Annotation): Category {
   return cat
 }
 
-/** 分类色 CSS 变量（与 tokens.css 对应） */
-export const CATEGORY_COLOR: Record<Category, string> = {
-  arch: 'var(--cat-arch)',
-  figure: 'var(--cat-figure)',
-  object: 'var(--cat-object)',
-  plant: 'var(--cat-plant)',
-  animal: 'var(--cat-animal)',
-}
+/* 注：分类色不再用于静止态 marker（2026-07-11 朱笔圈点改版，PRD §3.8）——
+   分类身份只在悬停卡片的字印上揭示，字印 SVG 已内嵌各自分类色。 */

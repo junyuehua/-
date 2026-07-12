@@ -14,7 +14,7 @@ import {
 
 /**
  * 视图状态：screen = content × zoom + (tx, ty)。
- * content 坐标 = 真实完整卷轴分辨率像素（160348×7595），marker 锚点未来共用这套变换。
+ * content 坐标 = 真实完整卷轴分辨率像素（160348×7435），marker 锚点未来共用这套变换。
  */
 export interface ViewState {
   zoom: number

@@ -16,13 +16,15 @@ interface ScrollCanvasProps {
     onPointerCancel: (e: React.PointerEvent) => void
   }
   onClarity?: (ratio: number) => void
+  /** 需要与画面同 stacking context 的覆盖层（如标注层，其 multiply 混合依赖此结构） */
+  children?: React.ReactNode
 }
 
 /**
  * 主画布：常驻低清工作副本打底 + 高清瓦片层按需淡入（"低清先行、高清渐进"）。
- * 两层共用同一套 content 坐标系（160348×7595）变换矩阵。
+ * 两层共用同一套 content 坐标系（160348×7435）变换矩阵。
  */
-export function ScrollCanvas({ view, size, dragging, canvasRef, handlers, onClarity }: ScrollCanvasProps) {
+export function ScrollCanvas({ view, size, dragging, canvasRef, handlers, onClarity, children }: ScrollCanvasProps) {
   const sx = (view.zoom * CONTENT_W) / WORKING_W
   const sy = (view.zoom * CONTENT_H) / WORKING_H
   return (
@@ -37,6 +39,7 @@ export function ScrollCanvas({ view, size, dragging, canvasRef, handlers, onClar
         style={{ transform: `translate3d(${view.tx}px, ${view.ty}px, 0) scale(${sx}, ${sy})` }}
       />
       <TileLayer view={view} size={size} onClarity={onClarity} />
+      {children}
     </div>
   )
 }

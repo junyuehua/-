@@ -1,10 +1,10 @@
-/** 官方坐标系：真实完整卷轴分辨率（已切金色画，见 PRD §5），所有锚点/变换都以此为基准 */
+/** 官方坐标系：真实完整卷轴分辨率（已切金色画 + 上下裁边 顶100/底60，见 PRD §5），所有锚点/变换都以此为基准 */
 export const CONTENT_W = 160348
-export const CONTENT_H = 7595
+export const CONTENT_H = 7435
 
 /** 渲染用工作副本（瓦片架构落地前的过渡素材）的像素尺寸 */
 export const WORKING_W = 16000
-export const WORKING_H = 758
+export const WORKING_H = 742
 
 /** 最大缩放 = 扫描分辨率 200%（2026-07-10 拍板，后续可调）；超过 100% 即纯像素放大 */
 export const MAX_ZOOM = 2
@@ -55,13 +55,29 @@ export const EDGE_ZONE_TOP_PX = 120
 export const EDGE_ZONE_BOTTOM_PX = 160
 export const UI_LEAVE_DELAY_MS = 200
 
-/* —— 标注 marker（尺寸/偏移全部为固定屏幕像素，不随缩放变化，PRD §3.8）—— */
-/** marker 直径按层级分级：地标最大 / 场景中等（=Figma 标识 68:368 的 16px 基准）/ 细节最小 */
-export const MARKER_SIZE: Record<string, number> = { 地标: 22, 场景: 16, 细节: 12 }
+/* —— 标注 marker：朱笔圈点（尺寸/偏移全部为固定屏幕像素，不随缩放变化，PRD §3.8）—— */
+/** 圈的大小＝层级：地标大圈 / 场景中圈 / 细节小圈，三档离散、档间留足间距 */
+export const MARKER_SIZE: Record<string, number> = { 地标: 28, 场景: 18, 细节: 12 }
 /** marker 相对锚点的偏移（屏幕像素）。PRD 要求偏移避让被标注元素本身；标点调试期先设 0 便于校准坐标 */
 export const MARKER_OFFSET = { x: 0, y: 0 }
-/** 聚合标记尺寸（三圆品字形，Figma 聚合标识 68:367 为 22×21 基准） */
-export const CLUSTER_MARKER_SIZE = 26
+/** 聚合标记：单一固定尺寸（不参与"大小=层级"，数量交给中间的汉字；不比地标大圈抢眼），Figma 标记 106:3907 */
+export const CLUSTER_MARKER_SIZE = 27
+/** 聚合计数字：一…九，超过九显示"众"（PRD §3.8） */
+export const CLUSTER_NUMERALS = ['一', '二', '三', '四', '五', '六', '七', '八', '九']
+/** 朱圈"墨量"浓淡区间（按点位 id 稳定哈希取值；multiply 下低透明度=印得淡，模拟手书朱墨自然浓淡） */
+export const MARKER_INK_MIN = 0.68
+export const MARKER_INK_MAX = 1
+
+/**
+ * 分层显隐门槛（PRD §3.8，绑 tier；数值 = 相对实物比例，全部待实测可调）：
+ * 地标任何缩放可见（当全卷导航锚点）；场景中等缩放浮现；细节到实物 100% 附近才出现。
+ * [start, end] 为淡入区间——避免在门槛那一帧硬弹出。
+ */
+export const TIER_REVEAL: Record<string, { start: number; end: number } | null> = {
+  地标: null, // 始终可见
+  场景: { start: 0.4, end: 0.5 },
+  细节: { start: 0.8, end: 1.0 },
+}
 /** 聚合阈值（屏幕像素距离，单阈值起步；双阈值防抖动留到真实内容实测再定，PRD §8） */
 export const CLUSTER_THRESHOLD_PX = 48
 /** marker/卡片共享悬停态的离开缓冲（PRD §3.8：250-300ms） */

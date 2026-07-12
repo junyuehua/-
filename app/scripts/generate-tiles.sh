@@ -5,7 +5,7 @@
 # 输出：public/tiles/qingming.dzi + qingming_files/{0..18}/{x}_{y}.jpg（约 368MB，已 gitignore）
 #
 # 坐标系说明（勿改拼接顺序！）：
-#   官方坐标系 = 160348×7595（已切卷首金色装裱画，见 PRD §5）
+#   官方坐标系 = 160348×7435（已切卷首金色装裱画 + 上下裁边 顶100/底60 全分辨率px，见 PRD §5）
 #   内容 x 轴从左到右 = 4.jpg → 3.jpg → 2.jpg → image1-已裁金色画.jpg（卷首在最右）
 #   与 清明上河图-完整拼接.jpg（master）及所有已标注坐标一致，改动会导致全部锚点漂移
 set -e
@@ -24,13 +24,17 @@ echo "== 逐段水平拼接（约 9GB 临时 .v 文件，结束自动清理）==
 vips join "$TMP/s4.jpg" "$TMP/s3.jpg" "$TMP/j1.v" horizontal
 vips join "$TMP/j1.v" "$TMP/s2.jpg" "$TMP/j2.v" horizontal
 vips join "$TMP/j2.v" "$TMP/s1c.jpg" "$TMP/full.v" horizontal
-vipsheader "$TMP/full.v"  # 应为 160348x7595
+vipsheader "$TMP/full.v"  # 拼接后应为 160348x7595（裁边前）
+
+echo "== 上下裁边：顶 100 / 底 60 全分辨率 px → 160348x7435（官方坐标系）=="
+vips crop "$TMP/full.v" "$TMP/full_crop.v" 0 100 160348 7435
+vipsheader "$TMP/full_crop.v"  # 应为 160348x7435
 
 echo "== 切瓦片（512px / overlap 1 / JPEG Q80）=="
 mkdir -p public/tiles
 cd public/tiles
 rm -rf qingming.dzi qingming_files
-vips dzsave "$TMP/full.v" qingming --tile-size 512 --overlap 1 --suffix ".jpg[Q=80]"
+vips dzsave "$TMP/full_crop.v" qingming --tile-size 512 --overlap 1 --suffix ".jpg[Q=80]"
 
 du -sh qingming_files
 echo "完成：public/tiles/qingming.dzi"

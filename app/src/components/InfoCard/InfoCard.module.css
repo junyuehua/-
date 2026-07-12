@@ -44,15 +44,12 @@
   initial-value: 0px;
 }
 
-/* pre-line 保留标注正文里的换行；长内容卡片内部滚动（滚动事件由挂载方 stopPropagation，PRD §3.8）
+/* 可滚动内容区（正文 + 可选引用块）；长内容卡片内部滚动（滚动事件由挂载方 stopPropagation，PRD §3.8）
    滚出可读范围的文字用渐隐 mask 表达，不做生硬切割；滚动条隐藏 */
 .body {
-  font-family: var(--font-serif);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 2;
-  color: var(--text-black);
-  white-space: pre-line;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   max-height: 320px;
   overflow-y: auto;
   scrollbar-width: none;
@@ -80,6 +77,47 @@
 
 .fadeBottom {
   --fade-b: 36px;
+}
+
+/* 正文：pre-line 保留标注文案里的换行 */
+.bodyText {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 2;
+  color: var(--text-black);
+  white-space: pre-line;
+}
+
+.bodyText a {
+  color: var(--ui-red);
+  text-decoration: underline;
+}
+
+/* 引用块（Figma Citation 106:4206）：2px UI金竖条 + 字金 14px/行高2 */
+.citation {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.citationBar {
+  flex-shrink: 0;
+  width: 2px;
+  border-radius: 5px;
+  background: var(--ui-gold);
+}
+
+.citationText {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 2;
+  color: var(--text-gold);
+  white-space: pre-line;
 }
 
 .body a {

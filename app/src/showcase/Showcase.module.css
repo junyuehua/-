@@ -41,3 +41,45 @@
   bottom: 0;
   z-index: 1;
 }
+
+/* 标记展示：朱圈直接压在深色背景上看 multiply 效果 */
+.markerRow {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  background: var(--paper);
+  border-radius: var(--radius-sm);
+  width: fit-content;
+}
+
+.markerDemo {
+  mix-blend-mode: multiply;
+}
+
+.clusterDemo {
+  position: relative;
+  display: inline-flex;
+  width: 27px;
+  height: 27px;
+  mix-blend-mode: multiply;
+}
+
+.clusterDemo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.clusterDemo span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-kanji);
+  font-size: 14px;
+  line-height: 1;
+  color: var(--text-white);
+}
