@@ -23,6 +23,7 @@ const TAG_TO_CATEGORY: Record<string, Category> = {
   物件: 'object',
   植物: 'plant',
   动物: 'animal',
+  印章: 'seal',
 }
 
 /** 首个 tag 决定 marker/印章用色；无 tag 的数据问题点位回退到物件色并在控制台告警 */

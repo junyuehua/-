@@ -50,6 +50,15 @@ export const WHEEL_ZOOM_SENSITIVITY = 0.0015
 /** 比例 toast 停留时长——待实测调整（用户拍板先 1s 左右） */
 export const TOAST_HIDE_MS = 1200
 
+/**
+ * 最小可用视口（2026-07-11 拍板 1024×640）：低于任一维度即停止渲染画布（也停掉瓦片请求），
+ * 整屏显示"请用更大屏幕"提示卡；resize 实时进出，恢复时不丢当前视图状态。
+ * 1024 = 顶栏三簇（模式切换/分段导览/音乐）无重叠的自然下限之上，且保留笔记本分屏场景；
+ * 640 = 再矮画面可视高度不足 450px。与"移动端 UA 检测提示"互补，是两道独立检查。
+ */
+export const MIN_VIEWPORT_W = 1024
+export const MIN_VIEWPORT_H = 640
+
 /** 沉浸模式：顶部/底部唤醒热区高度 与 离开热区的隐藏缓冲 */
 export const EDGE_ZONE_TOP_PX = 120
 export const EDGE_ZONE_BOTTOM_PX = 160

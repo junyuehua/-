@@ -5,7 +5,8 @@ import { ModeToggle, type ViewMode } from './components/ModeToggle/ModeToggle'
 import { NavBar } from './components/NavBar/NavBar'
 import { ScaleToast } from './components/ScaleControl/ScaleControl'
 import { SegmentNav } from './components/SegmentNav/SegmentNav'
-import { MusicNoteIcon, TranslateIcon, ViewRealSizeIcon } from './components/icons'
+import { ViewportGate } from './components/ViewportGate/ViewportGate'
+import { MusicNoteIcon, MusicOffIcon, ViewRealSizeIcon } from './components/icons'
 import { Showcase } from './showcase/Showcase'
 import annotationsData from '../annotations.json'
 import segmentsData from '../segments.json'
@@ -19,6 +20,8 @@ import {
   CONTENT_W,
   EDGE_ZONE_BOTTOM_PX,
   EDGE_ZONE_TOP_PX,
+  MIN_VIEWPORT_H,
+  MIN_VIEWPORT_W,
   PHYSICAL_1_ZOOM,
   TOAST_HIDE_MS,
   UI_LEAVE_DELAY_MS,
@@ -55,6 +58,30 @@ function Viewer() {
   // 视口清晰度（视口内高清瓦片加载比例），驱动顶部细进度条；指示条视觉为占位方案（ui-backlog #7 同类）
   const [clarity, setClarity] = useState(1)
   const handleClarity = useCallback((ratio: number) => setClarity(ratio), [])
+
+  // —— 背景音乐：默认不播放；首次点击从头播放，再点暂停，下次点击从暂停处续播（循环）——
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const [musicOn, setMusicOn] = useState(false)
+  const toggleMusic = useCallback(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio('/music/bgm.m4a')
+      audioRef.current.loop = true
+    }
+    const audio = audioRef.current
+    if (audio.paused) {
+      void audio.play()
+      setMusicOn(true)
+    } else {
+      audio.pause()
+      setMusicOn(false)
+    }
+  }, [])
+  useEffect(
+    () => () => {
+      audioRef.current?.pause()
+    },
+    [],
+  )
 
   // —— 比例 toast：缩放变化时出现，停留 TOAST_HIDE_MS 后消失（时长待实测调整）——
   const [toastVisible, setToastVisible] = useState(false)
@@ -148,6 +175,17 @@ function Viewer() {
     [flyToContent],
   )
 
+  // 视口硬门槛（1024×640）：过小即停止渲染画布（瓦片请求随之停止），整屏提示卡；
+  // 拉大实时恢复——view 状态在 useViewer 里未卸载，不丢观看位置
+  if (size.w < MIN_VIEWPORT_W || size.h < MIN_VIEWPORT_H) {
+    return (
+      <div>
+        <AppBackground />
+        <ViewportGate />
+      </div>
+    )
+  }
+
   return (
     <div>
       <AppBackground />
@@ -179,9 +217,13 @@ function Viewer() {
         <div className={styles.topCenter}>
           <SegmentNav segments={segments} activeId={activeSegment?.id} onSelect={handleSegmentSelect} />
         </div>
+        {/* 语言切换按钮移出 MVP（英文支持下个版本再做）；音乐 off 态用 Google music_off 图标 */}
         <div className={styles.topRight}>
-          <IconButton icon={<MusicNoteIcon />} label="背景音乐" />
-          <IconButton icon={<TranslateIcon />} label="切换语言" />
+          <IconButton
+            icon={musicOn ? <MusicNoteIcon /> : <MusicOffIcon />}
+            label={musicOn ? '暂停背景音乐' : '播放背景音乐'}
+            onClick={toggleMusic}
+          />
         </div>
       </header>
 

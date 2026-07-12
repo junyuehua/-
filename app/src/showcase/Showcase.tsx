@@ -8,7 +8,7 @@ import { ModeToggle, type ViewMode } from '../components/ModeToggle/ModeToggle'
 import { NavBar } from '../components/NavBar/NavBar'
 import { ScaleControl, ScaleToast } from '../components/ScaleControl/ScaleControl'
 import { SegmentNav } from '../components/SegmentNav/SegmentNav'
-import { MusicNoteIcon, TranslateIcon, ViewRealSizeIcon } from '../components/icons'
+import { MusicNoteIcon, MusicOffIcon, ViewRealSizeIcon } from '../components/icons'
 import segmentsData from '../../segments.json'
 import type { Segment } from '../viewer/segments'
 import circle1 from '../assets/markers/circle-1.svg'
@@ -17,7 +17,7 @@ import circle3 from '../assets/markers/circle-3.svg'
 import clusterBlob from '../assets/markers/cluster-blob.svg'
 import styles from './Showcase.module.css'
 
-const CATEGORIES: Category[] = ['arch', 'figure', 'object', 'plant', 'animal']
+const CATEGORIES: Category[] = ['arch', 'figure', 'object', 'plant', 'animal', 'seal']
 
 /** 标题唯一源 segments.json（PRD §3.11 禁止 UI 硬编码另一份） */
 const segments = segmentsData as Segment[]
@@ -43,8 +43,8 @@ export function Showcase() {
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>按钮 IconButton</h2>
           <div className={styles.row}>
-            <IconButton icon={<MusicNoteIcon />} label="背景音乐" />
-            <IconButton icon={<TranslateIcon />} label="切换语言" />
+            <IconButton icon={<MusicNoteIcon />} label="背景音乐（播放中）" />
+            <IconButton icon={<MusicOffIcon />} label="背景音乐（关）" />
             <IconButton icon={<ViewRealSizeIcon />} label="恢复实际大小" />
           </div>
         </section>

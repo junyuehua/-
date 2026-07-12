@@ -1,0 +1,45 @@
+/* placeholder 视觉：纸面卡片 + 金描边，居中；最终设计稿待定后整体替换 */
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.card {
+  max-width: 420px;
+  padding: 8px;
+  background: var(--paper-80);
+  border-radius: var(--radius-sm);
+}
+
+.card > * {
+  margin: 0;
+}
+
+.title {
+  padding: 24px 24px 8px;
+  border: 1px solid var(--gold-text);
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  font-family: var(--font-kanji);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--text-black);
+  text-align: center;
+}
+
+.hint {
+  padding: 0 24px 24px;
+  border: 1px solid var(--gold-text);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  font-family: var(--font-serif);
+  font-size: 14px;
+  line-height: 2;
+  color: var(--text-gold);
+  text-align: center;
+}

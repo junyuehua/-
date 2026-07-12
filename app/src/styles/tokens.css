@@ -11,12 +11,13 @@
   --text-white: #ffffff; /* 字白 */
   --ui-red: #b93a26; /* UI红 */
 
-  /* 5 分类色 */
+  /* 6 分类色 */
   --cat-arch: #7c4449; /* 建筑·胭虹 */
   --cat-figure: #32788a; /* 人物·青蓝 */
   --cat-object: #6b798e; /* 物件·灰蓝 */
   --cat-plant: #6a8d52; /* 植物·灰绿 */
   --cat-animal: #be8a2f; /* 动物·赭石 */
+  --cat-seal: #8a2e1e; /* 印章·砖红（2026-07-11 新增） */
 
   /* 背景渐变 */
   --bg-grad-top: #765e44;
