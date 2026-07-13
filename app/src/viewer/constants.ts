@@ -82,7 +82,7 @@ export const AUTO_PAN_RESUME_TAU_MS = 380
 
 /* —— 标注 marker：朱笔圈点（实物 100% 以内为固定屏幕像素；超过后随缩放温和放大，见 markerGrowth）—— */
 /** 圈的大小＝层级：地标大圈 / 场景中圈 / 细节小圈，三档离散、档间留足间距 */
-export const MARKER_SIZE: Record<string, number> = { 地标: 28, 场景: 18, 细节: 14 }
+export const MARKER_SIZE: Record<string, number> = { 地标: 28, 场景: 20, 细节: 16 }
 /** marker 点击热区基准尺寸（比可见圈大一圈，随 markerGrowth 同步放大） */
 export const MARKER_HIT_SIZE = 36
 /** 高倍缩放下 marker 的放大上限 */
