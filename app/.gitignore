@@ -23,5 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
-# 深度缩放瓦片（368MB，用 scripts/generate-tiles.sh 重新生成，不入库）
-public/tiles
+# 深度缩放瓦片（363MB / 6416 文件，可用 scripts/generate-tiles.sh 重新生成）：
+# 2026-07-13 起入库——Vercel 走 GitHub 云端构建拉取，本地直传 6000+ 文件会被限流拖垮
+# public/tiles
+.vercel
+.env*
