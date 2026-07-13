@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>分段主题工具 · 清明上河图</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:#1c1c1c; color:#eee; overflow:hidden; }
+
+  #toolbar { position:fixed; top:0; left:0; right:0; height:52px; background:#262626; border-bottom:1px solid #3a3a3a;
+    display:flex; align-items:center; gap:10px; padding:0 14px; z-index:200; font-size:13px; }
+  #toolbar button { background:#3a3a3a; border:1px solid #4d4d4d; color:#eee; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:13px; }
+  #toolbar button:hover { background:#4a4a4a; }
+  #toolbar .hint { color:#8a8a8a; font-size:12px; }
+  #zoomReadout { margin-left:auto; background:#000; padding:6px 10px; border-radius:4px; min-width:60px; text-align:center; border:1px solid #3a3a3a; }
+
+  #main { position:absolute; top:52px; left:0; right:0; bottom:0; display:flex; }
+  #canvasWrap { position:relative; flex:1 1 auto; overflow:hidden; background:#2c2a26; cursor:crosshair; }
+  #canvasWrap.dragging { cursor:grabbing; }
+  #canvasWrap.arming { cursor:col-resize; }
+  .world { position:absolute; top:0; left:0; transform-origin:0 0; }
+  .world img { position:absolute; left:0; top:0; display:block; }
+  .overlay { position:absolute; inset:0; pointer-events:none; }
+
+  .seg-band { position:absolute; top:0; bottom:0; display:flex; align-items:flex-start; justify-content:center; border-left:1px dashed rgba(255,255,255,.25); }
+  .seg-band-label { margin-top:8px; background:rgba(20,20,20,.6); color:#fff; font-size:12px; padding:2px 8px; border-radius:10px; white-space:nowrap; }
+  .seg-line { position:absolute; top:0; bottom:0; width:2px; margin-left:-1px; background:#e8c65a; box-shadow:0 0 0 1px rgba(0,0,0,.4); }
+  .focal-mark { position:absolute; width:14px; height:14px; margin-left:-7px; margin-top:-7px; border-radius:50%;
+    border:2px solid #d66a52; background:rgba(214,106,82,.3); }
+
+  /* 顶部中央“题签”实时预览 —— 就是最终功能长的样子 */
+  #tiSign { position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:50; pointer-events:none;
+    background:rgba(251,246,234,.92); color:#1E2732; border:1px solid #DCCCA8; border-radius:3px;
+    padding:6px 18px; font-size:15px; letter-spacing:2px; box-shadow:0 2px 8px rgba(0,0,0,.35); text-align:center; }
+  #tiSign .en { display:block; font-size:10px; letter-spacing:1px; color:#7F6019; margin-top:1px; }
+  #tiSign.none { color:#a08; opacity:.5; }
+
+  #sidebar { width:340px; flex:0 0 auto; background:#232323; border-left:1px solid #3a3a3a; display:flex; flex-direction:column; overflow-y:auto; }
+  #sidebar h3 { margin:12px 14px 4px; font-size:13px; }
+  #readingHint { margin:0 14px 8px; font-size:11px; color:#8a8a8a; line-height:1.5; }
+  .segCard { margin:6px 10px; padding:10px; background:#2a2a2a; border:1px solid #3a3a3a; border-radius:6px; }
+  .segCard.active { border-color:#e8c65a; }
+  .segCard .cardHead { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; margin-bottom:6px; }
+  .segCard .swatch { width:12px; height:12px; border-radius:3px; flex:0 0 auto; }
+  .segCard label { display:block; font-size:11px; color:#999; margin:6px 0 2px; }
+  .segCard input[type=text], .segCard input[type=number] { width:100%; background:#1a1a1a; border:1px solid #444; color:#eee; padding:5px 7px; border-radius:4px; font-size:12px; font-family:inherit; }
+  .segCard .row { display:flex; gap:6px; align-items:center; }
+  .segCard .row > * { flex:1; }
+  .segCard .mini { font-size:11px; padding:4px 6px; background:#3a3a3a; border:1px solid #4d4d4d; color:#ddd; border-radius:4px; cursor:pointer; white-space:nowrap; flex:0 0 auto; }
+  .segCard .mini:hover { background:#484848; }
+  .segCard .mini.armed { background:#e8c65a; color:#1a1a1a; border-color:#e8c65a; }
+  .segCard .fixedNote { font-size:11px; color:#777; }
+  .segCard .focalState { font-size:11px; color:#8a8a8a; margin-top:2px; }
+  .segCard .focalState.set { color:#6fae6f; }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <strong style="font-size:13px">分段主题工具</strong>
+  <button id="fitBtn">看全卷</button>
+  <button id="exportBtn">导出 JSON</button>
+  <button id="importBtn">导入 JSON</button>
+  <input type="file" id="importInput" accept=".json" style="display:none">
+  <span class="hint">拖拽平移 · 滚轮缩放 · 「设左界」后在画面上点一下定分界 · 「设焦点」抓当前视图</span>
+  <span id="zoomReadout">—</span>
+</div>
+
+<div id="main">
+  <div id="canvasWrap">
+    <div class="world" id="world"></div>
+    <div class="overlay" id="overlay"></div>
+    <div id="tiSign" class="none">（当前段）</div>
+  </div>
+  <div id="sidebar">
+    <h3>五段主题（叙事顺序：卷首→卷尾）</h3>
+    <div id="readingHint">画面 <b>右端 = 卷首（春郊）</b>，<b>左端 = 卷尾（城内）</b>。每段设它的“左边界”(=与下一段的分界)；卷首右界 160348、卷尾左界 0 自动固定。</div>
+    <div id="segList"></div>
+  </div>
+</div>
+
+<script>
+const CONTENT_W = 160348, CONTENT_H = 7435;   // 官方坐标系（已切金色画+上下裁边）
+const WORLD_W = 16000, WORLD_H = 742;         // 工作副本像素尺寸
+const SCALE_X = WORLD_W / CONTENT_W, SCALE_Y = WORLD_H / CONTENT_H;
+
+const BAND = ['rgba(106,141,82,.14)','rgba(50,120,138,.14)','rgba(185,58,38,.16)','rgba(190,138,47,.14)','rgba(124,68,73,.16)'];
+const SWATCH = ['#6A8D52','#32788A','#B93A26','#BE8A2F','#7C4449'];
+
+// 叙事顺序：段1在最右(高x)，段5在最左(x=0)
+let segments = [
+  { id:1, title_zh:'春郊乡野', title_en:'Spring Countryside',        x_start:null, focal_x:null, focal_w:null },
+  { id:2, title_zh:'汴河码头', title_en:'The Bian River Docks',      x_start:null, focal_x:null, focal_w:null },
+  { id:3, title_zh:'飞虹卧波', title_en:'The Rainbow Bridge',          x_start:null, focal_x:null, focal_w:null },
+  { id:4, title_zh:'关厢街市', title_en:'Outside the Gate',          x_start:null, focal_x:null, focal_w:null },
+  { id:5, title_zh:'东京梦华', title_en:'Dreams of the Eastern Capital', x_start:0, focal_x:null, focal_w:null },
+];
+
+const world = document.getElementById('world');
+const overlay = document.getElementById('overlay');
+const canvasWrap = document.getElementById('canvasWrap');
+const zoomReadout = document.getElementById('zoomReadout');
+const tiSign = document.getElementById('tiSign');
+const segListEl = document.getElementById('segList');
+
+world.style.width = WORLD_W+'px'; world.style.height = WORLD_H+'px';
+const img = document.createElement('img');
+img.src = 'assets/qingming-scroll-working.jpg';
+img.width = WORLD_W; img.height = WORLD_H; img.draggable = false;
+world.appendChild(img);
+
+const state = { scale:0.1, panX:0, panY:0 };
+let armedSeg = null;   // 正在“设左界”的段索引
+
+function fitScale(){ return canvasWrap.clientWidth / WORLD_W; }
+function fitAll(){
+  state.scale = fitScale();
+  state.panX = 0;
+  state.panY = (canvasWrap.clientHeight - WORLD_H*state.scale)/2;
+  render();
+}
+// content x <-> 屏幕 x
+function contentXToScreen(cx){ return state.panX + (cx*SCALE_X)*state.scale; }
+function screenXToContent(sx){ return ((sx - state.panX)/state.scale)/SCALE_X; }
+function viewportCenterContentX(){ return screenXToContent(canvasWrap.clientWidth/2); }
+function viewportContentWidth(){ return (canvasWrap.clientWidth/state.scale)/SCALE_X; }
+
+// 段 i 的 [x_start, x_end]（叙事：段1右界固定 = CONTENT_W；段5左界固定 = 0）
+function segRange(i){
+  const xs = segments[i].x_start;
+  const xe = (i===0) ? CONTENT_W : segments[i-1].x_start;
+  if (xs==null || xe==null) return null;
+  return [Math.min(xs,xe), Math.max(xs,xe)];
+}
+function segAtContentX(cx){
+  for (let i=0;i<segments.length;i++){ const r=segRange(i); if(r && cx>=r[0] && cx<r[1]) return i; }
+  return -1;
+}
+
+function render(){
+  world.style.transform = `translate(${state.panX}px,${state.panY}px) scale(${state.scale})`;
+  zoomReadout.textContent = Math.round(state.scale/fitScale()*100)+'% 卷宽';
+  let html='';
+  segments.forEach((s,i)=>{
+    const r=segRange(i); if(!r) return;
+    const L=contentXToScreen(r[0]), R=contentXToScreen(r[1]);
+    html += `<div class="seg-band" style="left:${L}px;width:${Math.max(0,R-L)}px;background:${BAND[i]}"><span class="seg-band-label">${i+1} · ${s.title_zh||'(未命名)'}</span></div>`;
+    if (r[0] > 0) html += `<div class="seg-line" style="left:${contentXToScreen(r[0])}px"></div>`;
+    if (s.focal_x!=null){ const fx=contentXToScreen(s.focal_x); html += `<div class="focal-mark" style="left:${fx}px;top:${canvasWrap.clientHeight/2}px" title="焦点"></div>`; }
+  });
+  overlay.innerHTML = html;
+  // 顶部题签实时预览
+  const ci = segAtContentX(viewportCenterContentX());
+  if (ci>=0){ tiSign.className=''; tiSign.innerHTML = `${segments[ci].title_zh}<span class="en">${segments[ci].title_en||''}</span>`; }
+  else { tiSign.className='none'; tiSign.textContent='（当前段：边界未设全）'; }
+}
+
+// —— 平移 / 缩放 / 点击设界 ——
+let dragging=false, moved=false, lastX=0, lastY=0;
+canvasWrap.addEventListener('mousedown', e=>{ dragging=true; moved=false; lastX=e.clientX; lastY=e.clientY; canvasWrap.classList.add('dragging'); });
+window.addEventListener('mousemove', e=>{ if(!dragging) return; const dx=e.clientX-lastX, dy=e.clientY-lastY; if(Math.abs(dx)>3||Math.abs(dy)>3) moved=true; state.panX+=dx; state.panY+=dy; lastX=e.clientX; lastY=e.clientY; render(); });
+window.addEventListener('mouseup', e=>{
+  if (dragging && !moved && armedSeg!=null){
+    const rect=canvasWrap.getBoundingClientRect();
+    const cx=Math.round(screenXToContent(e.clientX-rect.left));
+    segments[armedSeg].x_start = Math.max(0, Math.min(CONTENT_W, cx));
+    disarm(); renderList(); render();
+  }
+  dragging=false; canvasWrap.classList.remove('dragging');
+});
+canvasWrap.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const rect=canvasWrap.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const bx=(mx-state.panX)/state.scale, by=(my-state.panY)/state.scale;
+  const delta=-e.deltaY*0.0015;
+  const ns=Math.min(Math.max(state.scale*(1+delta), fitScale()*0.9), 8);
+  state.panX = mx - bx*ns; state.panY = my - by*ns; state.scale = ns;
+  render();
+}, {passive:false});
+
+function arm(i){ armedSeg=i; canvasWrap.classList.add('arming'); renderList(); }
+function disarm(){ armedSeg=null; canvasWrap.classList.remove('arming'); }
+
+function flyTo(cx, cw){
+  const targetW = cw || CONTENT_W*0.12;
+  const ns = canvasWrap.clientWidth / (targetW*SCALE_X);
+  state.scale = Math.min(Math.max(ns, fitScale()*0.9), 8);
+  state.panX = canvasWrap.clientWidth/2 - (cx*SCALE_X)*state.scale;
+  state.panY = (canvasWrap.clientHeight - WORLD_H*state.scale)/2;
+  render();
+}
+
+// —— 侧栏 ——
+function renderList(){
+  segListEl.innerHTML='';
+  segments.forEach((s,i)=>{
+    const leftFixed = (i===segments.length-1); // 段5 左界固定 0
+    const rightFixed = (i===0);                // 段1 右界固定 CONTENT_W
+    const r=segRange(i);
+    const el=document.createElement('div');
+    el.className='segCard'+(armedSeg===i?' active':'');
+    el.innerHTML=`
+      <div class="cardHead"><span class="swatch" style="background:${SWATCH[i]}"></span>${i+1} · ${s.title_zh||'(未命名)'}</div>
+      <label>标题（中）</label><input type="text" data-f="title_zh" value="${s.title_zh||''}">
+      <label>标题（英）</label><input type="text" data-f="title_en" value="${s.title_en||''}">
+      <label>左边界 x（content 坐标）${leftFixed?'<span class="fixedNote"> — 卷尾固定 0</span>':''}${rightFixed?'':''}</label>
+      <div class="row">
+        <input type="number" data-f="x_start" value="${s.x_start??''}" ${leftFixed?'disabled':''}>
+        ${leftFixed?'':`<button class="mini ${armedSeg===i?'armed':''}" data-act="arm">${armedSeg===i?'点画面定界…':'设左界'}</button>`}
+      </div>
+      ${rightFixed?'<div class="fixedNote">右界 = 160348（卷首固定）</div>':''}
+      <label>跳转焦点</label>
+      <div class="row">
+        <div class="focalState ${s.focal_x!=null?'set':''}">${s.focal_x!=null?('已设 · x='+Math.round(s.focal_x)+' · 宽≈'+Math.round(s.focal_w)):'未设'}</div>
+        <button class="mini" data-act="setFocal">设为当前视图</button>
+        <button class="mini" data-act="tryFocal" ${s.focal_x==null?'disabled':''}>试跳</button>
+      </div>
+      <div class="row" style="margin-top:6px"><button class="mini" data-act="goSeg" ${r?'':'disabled'}>定位本段</button></div>
+    `;
+    el.querySelectorAll('input').forEach(inp=>{
+      inp.addEventListener('change',()=>{
+        const f=inp.dataset.f;
+        if(f==='x_start'){ const v=inp.value===''?null:Math.max(0,Math.min(CONTENT_W,parseInt(inp.value))); segments[i].x_start=v; }
+        else segments[i][f]=inp.value;
+        renderList(); render();
+      });
+    });
+    el.querySelector('[data-act="arm"]')?.addEventListener('click',()=> armedSeg===i?disarm():arm(i));
+    el.querySelector('[data-act="setFocal"]').addEventListener('click',()=>{ segments[i].focal_x=Math.round(viewportCenterContentX()); segments[i].focal_w=Math.round(viewportContentWidth()); renderList(); render(); });
+    el.querySelector('[data-act="tryFocal"]').addEventListener('click',()=> flyTo(segments[i].focal_x, segments[i].focal_w));
+    el.querySelector('[data-act="goSeg"]').addEventListener('click',()=>{ const rr=segRange(i); if(rr) flyTo((rr[0]+rr[1])/2, rr[1]-rr[0]); });
+    segListEl.appendChild(el);
+  });
+}
+
+// —— 导出 / 导入 ——
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  const data = segments.map((s,i)=>{ const r=segRange(i)||[null,null]; return { id:s.id, title_zh:(s.title_zh||'').trim(), title_en:(s.title_en||'').trim(), x_start:r[0], x_end:r[1], focal_x:s.focal_x, focal_w:s.focal_w }; });
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='segments.json'; a.click(); URL.revokeObjectURL(a.href);
+});
+const importInput=document.getElementById('importInput');
+document.getElementById('importBtn').addEventListener('click',()=>importInput.click());
+importInput.addEventListener('change',e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ try{
+    const arr=JSON.parse(rd.result);
+    arr.forEach(o=>{ const s=segments.find(x=>x.id===o.id); if(s){ s.title_zh=(o.title_zh&&o.title_zh.trim())||s.title_zh; s.title_en=(o.title_en&&o.title_en.trim())||s.title_en; if(o.x_start!=null) s.x_start=o.x_start; s.focal_x=o.focal_x??null; s.focal_w=o.focal_w??null; } });
+    segments[segments.length-1].x_start=0;
+    renderList(); render();
+  }catch(err){ alert('导入失败：JSON 格式不对'); } };
+  rd.readAsText(file); importInput.value='';
+});
+document.getElementById('fitBtn').addEventListener('click', fitAll);
+
+window.addEventListener('resize', render);
+renderList();
+fitAll();
+</script>
+</body>
+</html>

@@ -1,11 +1,17 @@
 import styles from './ModeToggle.module.css'
 
-export type ViewMode = 'learn' | 'immerse'
+export type ViewMode = 'learn' | 'travel' | 'immerse'
 
-/** UI 文案 2026-07-11 定稿：读画（原"学习"）/ 卧游（原"沉浸"，取宗炳"卧以游之"典故）；内部代号 learn/immerse 不变 */
+/** 三模式循环顺序（I 键快捷切换共用，避免两处硬编码） */
+export const MODE_ORDER: ViewMode[] = ['learn', 'travel', 'immerse']
+
+/** 三模式 2026-07-11 定稿（PRD §3.2）：读画=learn（主动+信息）/ 卧游=travel（自动展卷+标记，取宗炳
+    "卧以游之"典故）/ 神游=immerse（自动展卷+UI 全隐纯欣赏，沿用旧 immerse 代号——其"UI 全淡出"语义
+    最接近神游）。文案缩为两字：三 tab 在 1024px 最小视口下不挤 */
 const TABS: { value: ViewMode; label: string }[] = [
-  { value: 'learn', label: '读画模式' },
-  { value: 'immerse', label: '卧游模式' },
+  { value: 'learn', label: '细览' },
+  { value: 'travel', label: '卧游' },
+  { value: 'immerse', label: '入境' },
 ]
 
 interface ModeToggleProps {

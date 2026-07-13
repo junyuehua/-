@@ -1,4 +1,5 @@
-/* placeholder 视觉：纸面卡片 + 金描边，居中；最终设计稿待定后整体替换 */
+/* Figma 卡片wraper 166:427（2026-07-13 定稿，取代 placeholder）：
+   纸面 80% 外卡 p8 radius2 → 金字色描边内容框 445 宽 / p 24×48 / gap8 radius2 */
 .gate {
   position: fixed;
   inset: 0;
@@ -10,36 +11,39 @@
 }
 
 .card {
-  max-width: 420px;
   padding: 8px;
   background: var(--paper-80);
   border-radius: var(--radius-sm);
 }
 
-.card > * {
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 445px;
+  max-width: 100%;
+  padding: 24px 48px;
+  border: 1px solid var(--gold-text);
+  border-radius: var(--radius-sm);
+}
+
+.content > * {
   margin: 0;
 }
 
 .title {
-  padding: 24px 24px 8px;
-  border: 1px solid var(--gold-text);
-  border-bottom: none;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   font-family: var(--font-kanji);
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 400;
-  color: var(--text-black);
+  color: var(--text-gold);
   text-align: center;
 }
 
 .hint {
-  padding: 0 24px 24px;
-  border: 1px solid var(--gold-text);
-  border-top: none;
-  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
   font-family: var(--font-serif);
   font-size: 14px;
+  font-weight: 500;
   line-height: 2;
-  color: var(--text-gold);
+  color: var(--text-black);
   text-align: center;
 }

@@ -1,4 +1,5 @@
-/* Figma 模式选择 65:213：纸面 80% 半透明底（透出画面）/ UI金描边 / p3 gap2 radius4；Tab 65:223 h32 px16 radius2 */
+/* Figma 模式选择 65:213（2026-07-13 对齐改版：字重 700 / 字距 0.1em / hover 实心纸面）：
+   纸面 80% 半透明底（透出画面）/ UI金描边 / p3 gap2 radius4；Tab 65:223 h32 px16 radius2 */
 .toggle {
   display: inline-flex;
   gap: 2px;
@@ -19,16 +20,17 @@
   border-radius: var(--radius-sm);
   font-family: var(--font-serif);
   font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.7px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   color: var(--text-gold);
   white-space: nowrap;
   cursor: pointer;
   transition: background-color 120ms ease;
 }
 
+/* hover = 实心纸面 #FBF6EA（Figma Tab 65:224，取代早期半透明金 hover） */
 .tab:not(.selected):hover {
-  background: var(--gold-hover);
+  background: var(--paper);
 }
 
 .selected {

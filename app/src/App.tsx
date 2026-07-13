@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppBackground } from './components/AppBackground/AppBackground'
 import { IconButton } from './components/IconButton/IconButton'
-import { ModeToggle, type ViewMode } from './components/ModeToggle/ModeToggle'
+import { MODE_ORDER, ModeToggle, type ViewMode } from './components/ModeToggle/ModeToggle'
 import { NavBar } from './components/NavBar/NavBar'
 import { ScaleToast } from './components/ScaleControl/ScaleControl'
 import { ScrollIntro } from './components/ScrollIntro/ScrollIntro'
 import { SegmentNav } from './components/SegmentNav/SegmentNav'
 import { ViewportGate } from './components/ViewportGate/ViewportGate'
-import { AutoStoriesIcon, MusicNoteIcon, MusicOffIcon, ViewRealSizeIcon } from './components/icons'
+import { InfoIIcon, MusicNoteIcon, MusicOffIcon, ViewRealSizeIcon } from './components/icons'
 import { Showcase } from './showcase/Showcase'
 import annotationsData from '../annotations.json'
 import segmentsData from '../segments.json'
@@ -16,6 +16,7 @@ import { segmentAtX, type Segment } from './viewer/segments'
 import { MarkerLayer } from './viewer/MarkerLayer'
 import { ScrollCanvas } from './viewer/ScrollCanvas'
 import { useViewer } from './viewer/useViewer'
+import { useAutoPan } from './viewer/useAutoPan'
 import {
   CONTENT_H,
   CONTENT_W,
@@ -54,6 +55,8 @@ function Viewer() {
     resetToActual,
     jumpToFraction,
     flyToContent,
+    panBy,
+    isAnimating,
   } = useViewer()
 
   // 视口清晰度（视口内高清瓦片加载比例），驱动顶部细进度条；指示条视觉为占位方案（ui-backlog #7 同类）
@@ -117,16 +120,43 @@ function Viewer() {
     return () => window.clearTimeout(t)
   }, [view.zoom])
 
-  // —— 沉浸模式：UI 退场；鼠标进入顶部/底部热区唤醒对应 UI（PRD §3.6：热区触发，非任意移动）——
+  // —— 卧游/神游共用的自动平移引擎（PRD §3.2）：卷首页打开期间暂停；悬停缓停只在卧游生效（神游无标记）——
+  const [hoverActive, setHoverActive] = useState(false)
+  useAutoPan({
+    enabled: mode !== 'learn' && introState === 'closed',
+    panBy,
+    isAnimating,
+    dragging,
+    hoverPaused: hoverActive && mode === 'travel',
+  })
+
+  // —— I 键循环切换三模式（PRD §3.7）：window 级监听，神游 UI 全隐时照常生效；卷首页打开时不响应 ——
+  const introOpenRef = useRef(true)
+  useEffect(() => {
+    introOpenRef.current = introState !== 'closed'
+  }, [introState])
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'i' && e.key !== 'I') return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (introOpenRef.current) return
+      // 目前页面无输入控件；将来若加输入框需在此排除 e.target
+      setMode((m) => MODE_ORDER[(MODE_ORDER.indexOf(m) + 1) % MODE_ORDER.length])
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // —— 卧游/神游：壳层 UI 退场；鼠标进入顶部/底部热区唤醒对应 UI（PRD §3.6：热区触发，非任意移动）——
   const [topHover, setTopHover] = useState(false)
   const [bottomHover, setBottomHover] = useState(false)
   useEffect(() => {
-    if (mode !== 'immerse') return
+    if (mode === 'learn') return
     setTopHover(false)
     setBottomHover(false)
     let topTimer: number | undefined
     let bottomTimer: number | undefined
-    // 热区"武装"机制：刚切入沉浸模式时鼠标往往就停在切换按钮所在的热区里，
+    // 热区"武装"机制：刚切入卧游/神游时鼠标往往就停在切换按钮所在的热区里，
     // 若立即响应会让 UI 马上弹回来、像个 bug——必须先观察到鼠标离开过热区一次，热区才生效
     let topArmed = false
     let bottomArmed = false
@@ -164,7 +194,8 @@ function Viewer() {
     }
   }, [mode])
 
-  // 首次进入期间（点过一次「展阅」之前）壳层 UI 全部隐藏（模式/分段导览/音乐/卷首/导航条）
+  // 首次进入期间（点过一次「展阅」之前）壳层 UI 全部隐藏（模式/分段导览/音乐/卷首/导航条）；
+  // 只有读画壳层常驻；卧游/神游都走边缘热区唤出（2026-07-12 用户拍板：卧游与神游的区别只在标记显不显示）
   const topVisible = (mode === 'learn' || topHover) && !firstVisit
   const bottomVisible = (mode === 'learn' || bottomHover) && !firstVisit
 
@@ -224,8 +255,9 @@ function Viewer() {
           annotations={annotations}
           view={view}
           size={size}
-          visible={mode === 'learn'}
+          visible={mode !== 'immerse'}
           zoomAtPoint={zoomAtPoint}
+          onHoverActiveChange={setHoverActive}
         />
       </ScrollCanvas>
 
@@ -241,7 +273,7 @@ function Viewer() {
         </div>
         {/* 语言切换按钮移出 MVP（英文支持下个版本再做）；音乐 off 态用 Google music_off 图标 */}
         <div className={styles.topRight}>
-          <IconButton icon={<AutoStoriesIcon />} label="卷首" onClick={reopenIntro} />
+          <IconButton icon={<InfoIIcon />} label="卷首" onClick={reopenIntro} />
           <IconButton
             icon={musicOn ? <MusicNoteIcon /> : <MusicOffIcon />}
             label={musicOn ? '暂停背景音乐' : '播放背景音乐'}

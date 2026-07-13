@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>标注坐标采集工具</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #1c1c1c;
+    color: #eee;
+    overflow: hidden;
+  }
+
+  #toolbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    background: #262626;
+    border-bottom: 1px solid #3a3a3a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    z-index: 200;
+    font-size: 13px;
+  }
+  #toolbar button {
+    background: #3a3a3a;
+    border: 1px solid #4d4d4d;
+    color: #eee;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  #toolbar button:hover { background: #4a4a4a; }
+  #toolbar .hint { color: #999; }
+  #zoomReadout {
+    margin-left: auto;
+    background: #000;
+    padding: 6px 10px;
+    border-radius: 4px;
+    min-width: 64px;
+    text-align: center;
+    border: 1px solid #3a3a3a;
+  }
+  #countReadout {
+    background: #000;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid #3a3a3a;
+  }
+
+  #main {
+    position: absolute;
+    top: 56px; left: 0; right: 0; bottom: 0;
+    display: flex;
+  }
+
+  #canvasWrap {
+    position: relative;
+    flex: 1 1 auto;
+    overflow: hidden;
+    background: #2c2a26;
+    cursor: crosshair;
+  }
+  #canvasWrap.dragging { cursor: grabbing; }
+
+  .world {
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: 0 0;
+  }
+  .world img { position: absolute; left: 0; top: 0; display: block; }
+
+  .overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+  }
+
+  /* 新交互：不再有连接线/锚点X标记。悬停时圆点消失、卡片原地取代。 */
+
+  .marker-dot {
+    position: absolute;
+    width: 14px; height: 14px;
+    margin-left: -7px; margin-top: -7px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.9);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.35);
+    pointer-events: auto;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+  /* 悬停态：圆点视觉上淡出消失，但保留 pointer-events 让点击热区依旧生效 */
+  .marker-dot.hover-hidden { opacity: 0; }
+  .marker-dot[data-tier="地标"] { width: 20px; height: 20px; margin-left: -10px; margin-top: -10px; }
+  .marker-dot[data-tier="场景"] { width: 15px; height: 15px; margin-left: -7.5px; margin-top: -7.5px; }
+  .marker-dot[data-tier="细节"] { width: 10px; height: 10px; margin-left: -5px; margin-top: -5px; }
+  .marker-dot.cat-建筑 { background: #4d7fb0; }
+  .marker-dot.cat-人物 { background: #d9843f; }
+  .marker-dot.cat-物件 { background: #8f63a8; }
+  .marker-dot.cat-植物 { background: #5f9a63; }
+  .marker-dot.cat-动物 { background: #a8623f; }
+  .marker-dot.cat-印章 { background: #8A2E1E; }
+  .marker-dot.cat-none { background: #999; }
+
+  .marker-card {
+    position: absolute;
+    min-width: 160px;
+    max-width: 220px;
+    background: rgba(20,20,20,0.95);
+    border: 1px solid #4d4d4d;
+    border-radius: 6px;
+    padding: 6px 9px;
+    font-size: 12px;
+    line-height: 1.5;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
+  .marker-card.show { opacity: 1; }
+  .marker-card .tags { margin-bottom: 3px; }
+  .marker-card .tags span {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 8px;
+    margin-right: 3px;
+    color: #fff;
+  }
+  .marker-card .title { font-weight: 600; }
+  .marker-card .coord { color: #999; font-size: 10px; margin-top: 2px; }
+
+  .pending-mark {
+    position: absolute;
+    width: 16px; height: 16px;
+    margin-left: -8px; margin-top: -8px;
+    border-radius: 50%;
+    border: 2px dashed #ffd24d;
+    background: rgba(255,210,77,0.25);
+    display: none;
+  }
+
+  /* ---------- 侧边栏 ---------- */
+  #sidebar {
+    width: 340px;
+    flex: 0 0 auto;
+    background: #232323;
+    border-left: 1px solid #3a3a3a;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #formSection {
+    padding: 14px;
+    border-bottom: 1px solid #3a3a3a;
+    display: none;
+  }
+  #formSection.show { display: block; }
+  #formSection h3 { margin: 0 0 10px; font-size: 14px; }
+  #formSection label { display: block; font-size: 12px; color: #aaa; margin: 8px 0 4px; }
+  #formSection input[type="text"], #formSection textarea, #formSection input[type="number"] {
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    color: #eee;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  #formSection textarea { min-height: 44px; resize: vertical; }
+  .coordRow { display: flex; gap: 8px; }
+  .coordRow > div { flex: 1; }
+  .checkRow { display: flex; gap: 10px; flex-wrap: wrap; }
+  .checkRow label { display: flex; align-items: center; gap: 4px; color: #eee; font-size: 12px; margin: 0; }
+  .radioRow { display: flex; gap: 10px; }
+  .radioRow label { display: flex; align-items: center; gap: 4px; color: #eee; font-size: 12px; margin: 0; }
+  .formButtons { display: flex; gap: 8px; margin-top: 12px; }
+  .formButtons button {
+    flex: 1;
+    padding: 7px;
+    border-radius: 4px;
+    border: 1px solid #4d4d4d;
+    background: #3a3a3a;
+    color: #eee;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .formButtons button.primary { background: #5b7fb0; border-color: #6f93c4; }
+  .formButtons button:hover { filter: brightness(1.15); }
+
+  .bodyHelp { display: flex; align-items: flex-start; gap: 8px; margin: 6px 0 4px; }
+  .bodyHelp span { flex: 1; font-size: 11px; color: #8a8a8a; line-height: 1.5; }
+  .bodyHelp code { background: #111; padding: 0 4px; border-radius: 3px; color: #c9a84a; }
+  .bodyBtns { flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; }
+  .bodyBtn { font-size: 11px; padding: 3px 8px; background: #3a3a3a; border: 1px solid #4d4d4d; color: #d8c48a; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+  .bodyBtn:hover { background: #454545; }
+  .bodyPreview .pv-link { color: #d66a52; text-decoration: underline; cursor: pointer; }
+  .bodyPreview { margin: 4px 0 2px; padding: 8px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; max-height: 180px; overflow-y: auto; }
+  .bodyPreview .previewEmpty { color: #666; font-size: 11px; }
+  .bodyPreview .pvLang { font-size: 10px; color: #777; margin-bottom: 6px; }
+  .bodyPreview .pv-text { font-size: 12px; color: #e0e0e0; line-height: 1.6; margin: 0 0 6px; white-space: pre-wrap; }
+  .bodyPreview .pv-quote { font-size: 12px; color: #c9a84a; line-height: 1.6; margin: 0 0 6px; padding: 6px 10px; border-left: 3px solid #b8923a; background: rgba(184,146,58,0.08); border-radius: 2px; white-space: pre-wrap; }
+
+  #listSection {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 8px;
+  }
+  .listItem {
+    padding: 8px 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    background: #2a2a2a;
+    font-size: 12px;
+    cursor: default;
+  }
+  .listItem:hover { background: #333; }
+  .listItem .row1 { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+  .listItem .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+  .listItem .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .listItem .tier-tag { font-size: 10px; color: #999; }
+  .listItem .row2 { display: flex; gap: 6px; }
+  .listItem .row2 button {
+    flex: 1;
+    font-size: 11px;
+    padding: 3px 4px;
+    background: #3a3a3a;
+    border: 1px solid #4d4d4d;
+    color: #ccc;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .listItem .row2 button:hover { background: #454545; }
+  .listItem .coord { color: #888; font-size: 10px; }
+
+  #emptyHint { color: #777; font-size: 12px; padding: 10px; text-align: center; }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <button id="exportBtn">导出 JSON</button>
+  <button id="importBtn">导入 JSON</button>
+  <input type="file" id="importInput" accept=".json" style="display:none">
+  <button id="clearBtn">清空全部</button>
+  <span class="hint">在画面上点击 = 新建一个点；点击已有圆点 = 编辑；拖拽平移，滚轮缩放（≥100%）</span>
+  <span id="countReadout">0 个点位</span>
+  <span id="zoomReadout">100%</span>
+</div>
+
+<div id="main">
+  <div id="canvasWrap">
+    <div class="world" id="world"></div>
+    <div class="overlay" id="overlay"></div>
+    <div class="pending-mark" id="pendingMark"></div>
+  </div>
+
+  <div id="sidebar">
+    <div id="formSection">
+      <h3 id="formTitle">新建点位</h3>
+
+      <label>坐标（原图像素，可微调）</label>
+      <div class="coordRow">
+        <div><input type="number" id="fieldX" placeholder="x"></div>
+        <div><input type="number" id="fieldY" placeholder="y"></div>
+      </div>
+
+      <label>分类（可多选）</label>
+      <div class="checkRow">
+        <label><input type="checkbox" value="建筑"> 建筑</label>
+        <label><input type="checkbox" value="人物"> 人物</label>
+        <label><input type="checkbox" value="物件"> 物件</label>
+        <label><input type="checkbox" value="植物"> 植物</label>
+        <label><input type="checkbox" value="动物"> 动物</label>
+        <label><input type="checkbox" value="印章"> 印章</label>
+      </div>
+
+      <label>层级</label>
+      <div class="radioRow">
+        <label><input type="radio" name="tier" value="地标"> 地标</label>
+        <label><input type="radio" name="tier" value="场景" checked> 场景</label>
+        <label><input type="radio" name="tier" value="细节"> 细节</label>
+      </div>
+
+      <label>标题（中）</label>
+      <input type="text" id="fieldTitleZh" placeholder="例如：说书人">
+
+      <label>标题（英）</label>
+      <input type="text" id="fieldTitleEn" placeholder="e.g. Storyteller">
+
+      <label>正文（中）</label>
+      <textarea id="fieldBodyZh" placeholder="历史信息说明..."></textarea>
+
+      <label>正文（英）</label>
+      <textarea id="fieldBodyEn" placeholder="English description..."></textarea>
+
+      <div class="bodyHelp">
+        <span>正文：<code>&gt;</code> 开头的行 = 金色引用块（空行分段，可穿插）。行内链接 <code>[文字](目标)</code>——外链填 <code>https://…</code>，站内跳到别的点位填 <code>#点位id</code>。</span>
+        <div class="bodyBtns">
+          <button type="button" class="bodyBtn" id="wrapQuoteBtn" title="把选中的文字/当前行包成引用块">＋引用 &gt;</button>
+          <button type="button" class="bodyBtn" id="insertLinkBtn" title="把选中的文字变成链接">＋链接</button>
+        </div>
+      </div>
+      <div id="bodyPreview" class="bodyPreview"><div class="previewEmpty">正文预览（含金色引用块）会显示在这里</div></div>
+
+      <div class="formButtons">
+        <button class="primary" id="saveBtn">保存</button>
+        <button id="cancelBtn">取消</button>
+        <button id="deleteBtn" style="display:none; background:#7a3a3a; border-color:#8a4a4a;">删除</button>
+      </div>
+    </div>
+
+    <div id="listSection">
+      <div id="emptyHint">还没有点位，去画面上点一下试试</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CAT_COLORS = { '建筑': '#4d7fb0', '人物': '#d9843f', '物件': '#8f63a8', '植物': '#5f9a63', '动物': '#a8623f', '印章': '#8A2E1E' };
+
+const worldEl = document.getElementById('world');
+const overlayEl = document.getElementById('overlay');
+const canvasWrap = document.getElementById('canvasWrap');
+const zoomReadout = document.getElementById('zoomReadout');
+const countReadout = document.getElementById('countReadout');
+const pendingMark = document.getElementById('pendingMark');
+
+// 真实完整卷轴（拼装自 Full scroll/1-4.jpg，右→左顺序，并已裁掉第一段卷首那幅金色装裱画）
+// 的原始像素尺寸——这是"官方"坐标系，导出的每个点位坐标都是相对这个真实分辨率的，
+// 跟工具里实际展示的图片分辨率无关。
+// 注意：裁掉金色画后真实宽度由旧的 182054 变为 160348；又做了上下裁边（顶100/底60全分辨率px），
+// 高度由 7595 变为 7435。坐标基准 = 160348×7435。
+const TRUE_W = 160348, TRUE_H = 7435;
+
+// 工具里实际加载渲染的是一份缩小的工作副本（浏览器渲染/性能考虑），
+// 两者之间用 SCALE_X/SCALE_Y 换算，坐标点在存储/表单里始终显示为 TRUE 分辨率下的值。
+const WORLD_W = 16000, WORLD_H = 742;
+const SCALE_X = WORLD_W / TRUE_W;
+const SCALE_Y = WORLD_H / TRUE_H;
+
+function trueToWorking(x, y) { return { x: x * SCALE_X, y: y * SCALE_Y }; }
+function workingToTrue(x, y) { return { x: x / SCALE_X, y: y / SCALE_Y }; }
+
+worldEl.style.width = WORLD_W + 'px';
+worldEl.style.height = WORLD_H + 'px';
+const img = document.createElement('img');
+img.src = 'assets/qingming-scroll-working.jpg';
+img.width = WORLD_W; img.height = WORLD_H;
+img.draggable = false;
+worldEl.appendChild(img);
+
+const MIN_SCALE = 1, MAX_SCALE = 10;
+const state = { scale: 1, panX: 20, panY: 20 };
+
+let points = [];   // {id, x, y, tags:[], tier, title_zh, title_en, body_zh, body_en}
+                   // 正文里以 > 开头的行 = 金色引用块（route 1，见 parseBlocks）；空行分段、可与正文穿插
+                   // 行内链接：[文字](目标)，目标 https://… = 外链、#id = 站内跳到该点位（见 renderInline）
+let nextId = 1;
+let editingId = null;
+let pendingCoord = null; // {x,y} 待保存的新点坐标
+
+function contentToScreen(x, y) {
+  return { x: state.panX + x * state.scale, y: state.panY + y * state.scale };
+}
+function screenToContent(sx, sy) {
+  return { x: (sx - state.panX) / state.scale, y: (sy - state.panY) / state.scale };
+}
+
+function renderTransform() {
+  worldEl.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.scale})`;
+  zoomReadout.textContent = Math.round(state.scale * 100) + '%';
+}
+
+// ---------------- marker DOM 管理 ----------------
+function markerColorClass(p) {
+  if (!p.tags || p.tags.length === 0) return 'cat-none';
+  return 'cat-' + p.tags[0];
+}
+
+function buildMarkerDom(p) {
+  const dot = document.createElement('div');
+  dot.className = 'marker-dot ' + markerColorClass(p);
+  dot.setAttribute('data-tier', p.tier);
+  dot.setAttribute('data-id', p.id);
+
+  const card = document.createElement('div');
+  card.className = 'marker-card';
+
+  overlayEl.appendChild(dot);
+  overlayEl.appendChild(card);
+
+  // 新交互：悬停时圆点本身淡出消失、原地被信息卡取代（不画连接线、不显示锚点标记）
+  dot.addEventListener('mouseenter', () => {
+    dot.classList.add('hover-hidden'); // 圆点消失
+    card.classList.add('show');        // 卡片原地浮现
+  });
+  dot.addEventListener('mouseleave', () => {
+    dot.classList.remove('hover-hidden');
+    card.classList.remove('show');
+  });
+  dot.addEventListener('mousedown', (e) => e.stopPropagation());
+  dot.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openEditForm(p.id);   // 圆点视觉消失，但点击热区依旧有效
+  });
+
+  p._dom = { dot, card };
+}
+
+function updateCardContent(p) {
+  const { card } = p._dom;
+  const tagsHtml = (p.tags || []).map(t => `<span style="background:${CAT_COLORS[t] || '#666'}">${t}</span>`).join('');
+  card.innerHTML = `<div class="tags">${tagsHtml}<span style="background:#555">${p.tier}</span></div>
+    <div class="title">${p.title_zh || '(未命名)'}</div>
+    <div class="coord">x:${Math.round(p.x)} y:${Math.round(p.y)}</div>`;
+}
+
+function renderMarkers() {
+  points.forEach(p => {
+    if (!p._dom) buildMarkerDom(p);
+    const dot = p._dom.dot;
+    // 保留悬停消失态：render 期间（拖拽/缩放）不要把 hover-hidden 冲掉
+    const hidden = dot.classList.contains('hover-hidden');
+    dot.className = 'marker-dot ' + markerColorClass(p) + (hidden ? ' hover-hidden' : '');
+    dot.setAttribute('data-tier', p.tier);
+    updateCardContent(p);
+
+    const w = trueToWorking(p.x, p.y); // p.x/p.y 存的是真实分辨率坐标，渲染前先转成工作副本坐标
+    const anchorScreen = contentToScreen(w.x, w.y);
+    // 无偏移：圈的圆心精确落在点击/锚点处（所见即所得，方便校准）
+    const dotX = anchorScreen.x;
+    const dotY = anchorScreen.y;
+
+    dot.style.left = dotX + 'px';
+    dot.style.top = dotY + 'px';
+
+    // 卡片略向右下偏，避免悬停时正好盖住锚点（不影响圆点位置）
+    p._dom.card.style.left = (dotX + 14) + 'px';
+    p._dom.card.style.top = (dotY + 12) + 'px';
+  });
+}
+
+function render() {
+  renderTransform();
+  renderMarkers();
+  if (pendingCoord) {
+    const w = trueToWorking(pendingCoord.x, pendingCoord.y); // pendingCoord 也是真实分辨率坐标
+    const s = contentToScreen(w.x, w.y);
+    pendingMark.style.left = s.x + 'px';
+    pendingMark.style.top = s.y + 'px';
+    pendingMark.style.display = 'block';
+  } else {
+    pendingMark.style.display = 'none';
+  }
+}
+
+// ---------------- 拖拽 / 缩放 / 点击拾取坐标 ----------------
+let dragging = false, dragMoved = false, lastX = 0, lastY = 0;
+
+canvasWrap.addEventListener('mousedown', (e) => {
+  dragging = true; dragMoved = false;
+  lastX = e.clientX; lastY = e.clientY;
+  canvasWrap.classList.add('dragging');
+});
+window.addEventListener('mousemove', (e) => {
+  if (!dragging) return;
+  const dx = e.clientX - lastX, dy = e.clientY - lastY;
+  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragMoved = true;
+  state.panX += dx; state.panY += dy;
+  lastX = e.clientX; lastY = e.clientY;
+  render();
+});
+window.addEventListener('mouseup', (e) => {
+  if (dragging && !dragMoved) {
+    // 视为点击：拾取坐标（工作副本坐标），换算成真实分辨率坐标后再进表单
+    const rect = canvasWrap.getBoundingClientRect();
+    const working = screenToContent(e.clientX - rect.left, e.clientY - rect.top);
+    const trueCoord = workingToTrue(working.x, working.y);
+    openCreateForm(trueCoord.x, trueCoord.y);
+  }
+  dragging = false;
+  canvasWrap.classList.remove('dragging');
+});
+
+canvasWrap.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const rect = canvasWrap.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left, mouseY = e.clientY - rect.top;
+  const before = screenToContent(mouseX, mouseY);
+  const delta = -e.deltaY * 0.0015;
+  const newScale = Math.min(Math.max(state.scale * (1 + delta), MIN_SCALE), MAX_SCALE);
+  state.panX = mouseX - before.x * newScale;
+  state.panY = mouseY - before.y * newScale;
+  state.scale = newScale;
+  render();
+}, { passive: false });
+
+// ---------------- 表单逻辑 ----------------
+const formSection = document.getElementById('formSection');
+const formTitle = document.getElementById('formTitle');
+const fieldX = document.getElementById('fieldX');
+const fieldY = document.getElementById('fieldY');
+const fieldTitleZh = document.getElementById('fieldTitleZh');
+const fieldTitleEn = document.getElementById('fieldTitleEn');
+const fieldBodyZh = document.getElementById('fieldBodyZh');
+const fieldBodyEn = document.getElementById('fieldBodyEn');
+const deleteBtn = document.getElementById('deleteBtn');
+const wrapQuoteBtn = document.getElementById('wrapQuoteBtn');
+const insertLinkBtn = document.getElementById('insertLinkBtn');
+let activeBody = fieldBodyZh; // 预览/引用/链接按钮作用于最后聚焦的那个正文框（默认中文）
+
+// route 1：正文里以 > 开头的行 = 金色引用块；空行分段。这套解析实现端（app 卡片）应复用。
+function parseBlocks(src) {
+  const blocks = []; let cur = null;
+  for (const line of (src || '').split('\n')) {
+    if (line.trim() === '') { cur = null; continue; }
+    const isQuote = /^\s*>\s?/.test(line);
+    const text = isQuote ? line.replace(/^\s*>\s?/, '') : line;
+    const type = isQuote ? 'quote' : 'text';
+    if (cur && cur.type === type) cur.text += '\n' + text;
+    else { cur = { type, text }; blocks.push(cur); }
+  }
+  return blocks;
+}
+function escHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+// 行内链接：[文字](目标)。目标 https://… = 外链；#id = 站内跳到该点位。实现端复用同一套。
+function renderInline(escaped) {
+  return escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, text, target) => {
+    const t = target.trim();
+    const label = t.startsWith('#') ? text + ' ↪' + t : text;
+    return '<span class="pv-link" title="' + t.replace(/"/g, '&quot;') + '">' + label + '</span>';
+  });
+}
+function renderBodyPreview() {
+  const el = document.getElementById('bodyPreview');
+  const blocks = parseBlocks(activeBody ? activeBody.value : '');
+  if (blocks.length === 0) { el.innerHTML = '<div class="previewEmpty">正文预览（含金色引用块）会显示在这里</div>'; return; }
+  const lang = activeBody === fieldBodyEn ? 'EN' : '中';
+  el.innerHTML = '<div class="pvLang">预览 · ' + lang + '</div>' + blocks.map(b => {
+    const html = renderInline(escHtml(b.text)).replace(/\n/g, '<br>');
+    return b.type === 'quote' ? '<div class="pv-quote">' + html + '</div>' : '<div class="pv-text">' + html + '</div>';
+  }).join('');
+}
+[fieldBodyZh, fieldBodyEn].forEach(ta => {
+  ta.addEventListener('focus', () => { activeBody = ta; renderBodyPreview(); });
+  ta.addEventListener('input', renderBodyPreview);
+});
+wrapQuoteBtn.addEventListener('click', () => {
+  const ta = activeBody; if (!ta) return;
+  const val = ta.value;
+  const lineStart = val.lastIndexOf('\n', ta.selectionStart - 1) + 1;
+  let lineEnd = val.indexOf('\n', ta.selectionEnd); if (lineEnd === -1) lineEnd = val.length;
+  const wrapped = val.slice(lineStart, lineEnd).split('\n')
+    .map(l => l.trim() === '' ? l : (/^\s*>/.test(l) ? l : '> ' + l)).join('\n');
+  ta.value = val.slice(0, lineStart) + wrapped + val.slice(lineEnd);
+  ta.focus();
+  renderBodyPreview();
+});
+insertLinkBtn.addEventListener('click', () => {
+  const ta = activeBody; if (!ta) return;
+  const val = ta.value, s = ta.selectionStart, e = ta.selectionEnd;
+  const sel = val.slice(s, e) || '链接文字';
+  const snippet = '[' + sel + '](https://)';
+  ta.value = val.slice(0, s) + snippet + val.slice(e);
+  // 选中 https:// 部分，方便直接替换成真实目标
+  const urlStart = s + ('[' + sel + '](').length;
+  ta.focus();
+  ta.selectionStart = urlStart; ta.selectionEnd = urlStart + 'https://'.length;
+  renderBodyPreview();
+});
+
+function resetFormFields() {
+  fieldTitleZh.value = ''; fieldTitleEn.value = '';
+  fieldBodyZh.value = ''; fieldBodyEn.value = '';
+  document.querySelectorAll('.checkRow input').forEach(c => c.checked = false);
+  document.querySelector('input[name="tier"][value="场景"]').checked = true;
+  activeBody = fieldBodyZh; renderBodyPreview();
+}
+
+function openCreateForm(x, y) {
+  editingId = null;
+  pendingCoord = { x, y };
+  formTitle.textContent = '新建点位';
+  deleteBtn.style.display = 'none';
+  resetFormFields();
+  fieldX.value = Math.round(x);
+  fieldY.value = Math.round(y);
+  formSection.classList.add('show');
+  render();
+  fieldTitleZh.focus();
+}
+
+function openEditForm(id) {
+  const p = points.find(pt => pt.id === id);
+  if (!p) return;
+  editingId = id;
+  pendingCoord = null;
+  formTitle.textContent = '编辑点位 #' + id;
+  deleteBtn.style.display = 'block';
+  fieldX.value = Math.round(p.x);
+  fieldY.value = Math.round(p.y);
+  fieldTitleZh.value = p.title_zh || '';
+  fieldTitleEn.value = p.title_en || '';
+  fieldBodyZh.value = p.body_zh || '';
+  fieldBodyEn.value = p.body_en || '';
+  activeBody = fieldBodyZh; renderBodyPreview();
+  document.querySelectorAll('.checkRow input').forEach(c => c.checked = (p.tags || []).includes(c.value));
+  document.querySelector(`input[name="tier"][value="${p.tier}"]`).checked = true;
+  formSection.classList.add('show');
+  render();
+}
+
+function closeForm() {
+  editingId = null;
+  pendingCoord = null;
+  formSection.classList.remove('show');
+  render();
+}
+
+document.getElementById('cancelBtn').addEventListener('click', closeForm);
+
+document.getElementById('saveBtn').addEventListener('click', () => {
+  const tags = Array.from(document.querySelectorAll('.checkRow input:checked')).map(c => c.value);
+  const tier = document.querySelector('input[name="tier"]:checked').value;
+  const x = parseFloat(fieldX.value), y = parseFloat(fieldY.value);
+  if (isNaN(x) || isNaN(y)) { alert('坐标不能为空'); return; }
+
+  if (editingId) {
+    const p = points.find(pt => pt.id === editingId);
+    p.x = x; p.y = y; p.tags = tags; p.tier = tier;
+    p.title_zh = fieldTitleZh.value; p.title_en = fieldTitleEn.value;
+    p.body_zh = fieldBodyZh.value; p.body_en = fieldBodyEn.value;
+  } else {
+    points.push({
+      id: nextId++,
+      x, y, tags, tier,
+      title_zh: fieldTitleZh.value, title_en: fieldTitleEn.value,
+      body_zh: fieldBodyZh.value, body_en: fieldBodyEn.value
+    });
+  }
+  closeForm();
+  renderList();
+  render();
+});
+
+deleteBtn.addEventListener('click', () => {
+  if (!editingId) return;
+  if (!confirm('删除这个点位？')) return;
+  const p = points.find(pt => pt.id === editingId);
+  if (p && p._dom) {
+    p._dom.dot.remove(); p._dom.card.remove();
+  }
+  points = points.filter(pt => pt.id !== editingId);
+  closeForm();
+  renderList();
+  render();
+});
+
+// ---------------- 侧边栏列表 ----------------
+const listSection = document.getElementById('listSection');
+
+function focusPoint(p) {
+  const vw = canvasWrap.clientWidth, vh = canvasWrap.clientHeight;
+  const targetScale = Math.max(state.scale, 3);
+  const w = trueToWorking(p.x, p.y); // p.x/p.y 是真实分辨率坐标，先转成工作副本坐标再计算平移
+  state.scale = targetScale;
+  state.panX = vw / 2 - w.x * targetScale;
+  state.panY = vh / 2 - w.y * targetScale;
+  render();
+}
+
+function renderList() {
+  countReadout.textContent = points.length + ' 个点位';
+  listSection.innerHTML = '';
+  if (points.length === 0) {
+    listSection.innerHTML = '<div id="emptyHint">还没有点位，去画面上点一下试试</div>';
+    return;
+  }
+  points.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'listItem';
+    const dotColor = CAT_COLORS[(p.tags||[])[0]] || '#999';
+    el.innerHTML = `
+      <div class="row1">
+        <span class="dot" style="background:${dotColor}"></span>
+        <span class="name">${p.title_zh || '(未命名) #' + p.id}</span>
+        <span class="tier-tag">${p.tier}</span>
+      </div>
+      <div class="coord">x:${Math.round(p.x)} y:${Math.round(p.y)}</div>
+      <div class="row2">
+        <button data-act="focus">定位</button>
+        <button data-act="edit">编辑</button>
+      </div>
+    `;
+    el.querySelector('[data-act="focus"]').addEventListener('click', () => focusPoint(p));
+    el.querySelector('[data-act="edit"]').addEventListener('click', () => openEditForm(p.id));
+    listSection.appendChild(el);
+  });
+}
+
+// ---------------- 导出 / 导入 / 清空 ----------------
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const data = points.map(({_dom, ...rest}) => rest);
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'annotations.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+const importInput = document.getElementById('importInput');
+document.getElementById('importBtn').addEventListener('click', () => importInput.click());
+importInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data)) throw new Error('not array');
+      // 清掉旧的marker DOM
+      points.forEach(p => { if (p._dom) { p._dom.dot.remove(); p._dom.card.remove(); } });
+      points = data;
+      nextId = points.reduce((m, p) => Math.max(m, p.id || 0), 0) + 1;
+      renderList();
+      render();
+    } catch (err) {
+      alert('导入失败：JSON格式不对');
+    }
+  };
+  reader.readAsText(file);
+  importInput.value = '';
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  if (points.length === 0) return;
+  if (!confirm('清空全部点位？此操作不可撤销（记得先导出备份）')) return;
+  points.forEach(p => { if (p._dom) { p._dom.dot.remove(); p._dom.card.remove(); } });
+  points = [];
+  renderList();
+  render();
+});
+
+render();
+renderList();
+</script>
+</body>
+</html>

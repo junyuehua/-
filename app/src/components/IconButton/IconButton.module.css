@@ -14,7 +14,10 @@
   transition: background-color 120ms ease;
 }
 
-.button:hover,
+.button:hover {
+  background: var(--paper);
+}
+
 .button:active {
   background: var(--ui-gold);
 }

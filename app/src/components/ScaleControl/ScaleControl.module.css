@@ -4,8 +4,9 @@
   align-items: center;
   justify-content: center;
   height: 38px;
+  min-width: 141px;
   padding: 4px 16px;
-  background: var(--paper);
+  background: var(--paper-80);
   border-radius: var(--radius-sm);
   font-family: var(--font-serif);
   font-size: 14px;

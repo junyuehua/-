@@ -1,0 +1,18 @@
+# —— 系统 / 编辑器 ——
+.DS_Store
+.obsidian/
+
+# —— 巨型原始素材（本地保留，不入远程仓库；来源与用途见 CLAUDE.md「文件位置」）——
+# Full scroll 单张 40-50MB、拼接 master 超过 GitHub 100MB 单文件硬限制
+Full scroll/
+清明上河图-完整拼接.jpg
+清明上河图-完整拼接-未裁边备份.jpg
+image1-已裁金色画.jpg
+# 根目录 assets/ = 已作废的旧 182054 基准 master（29MB，仅历史参考，勿再用作坐标基准）
+# 注意锚定到根：app/src/assets、prototypes/assets 都要正常入库
+/assets/
+# 字体原始件（57MB；正式使用的子集在 app/src/assets/fonts/）
+# 全部锚定到根且区分大小写不可靠（macOS git 忽略大小写）：/Fonts 若不锚定会误伤 app 内 fonts/music 目录
+/Fonts/
+# 音乐源文件（31MB；转码后的 bgm.m4a 在 app/public/music/）
+/Music/

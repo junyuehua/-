@@ -78,8 +78,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-kanji);
-  font-size: 14px;
+  /* 2026-07-13 对齐 Figma 106:3907：与 MarkerLayer .clusterCount 同步，思源宋体 Heavy 900 */
+  font-family: var(--font-serif);
+  font-weight: 900;
+  font-size: 16px;
   line-height: 1;
   color: var(--text-white);
 }

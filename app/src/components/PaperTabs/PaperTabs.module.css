@@ -1,8 +1,9 @@
-/* Figma 分段导航 108:3782 / 卷首 148:1237：纸签 h38 px16 py8 无描边，仅整条两端圆角 2px；
-   激活/悬停 = 透明度提满（2026-07-11 定稿，取代早期"UI红激活态"方案，见 decisions-log） */
+/* Figma 分段导航 108:3782 / 卷首 159:160：纸签 h38 px16 py8 无描边，仅整条两端圆角 2px；
+   激活/悬停 = 透明度提满（2026-07-11 定稿，取代早期"UI红激活态"方案，见 decisions-log）；
+   gap 2026-07-12 由 4 收窄到 2（159:160 定稿，与 ModeToggle 的 2px 一致），卷首/顶栏共用 */
 .nav {
   display: flex;
-  gap: 4px;
+  gap: 2px;
 }
 
 .tab {
@@ -17,7 +18,7 @@
   font-family: var(--font-serif);
   font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.7px;
+  letter-spacing: 0.1em; /* 2026-07-13 对齐 Figma 108:3782：0.7px → 0.1em */
   color: var(--text-gold);
   white-space: nowrap;
   cursor: pointer;

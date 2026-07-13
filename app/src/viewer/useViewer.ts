@@ -142,6 +142,25 @@ export function useViewer() {
     [animateTo],
   )
 
+  /** auto-pan 专用增量平移通道（走 apply 含 clamp）：返回是否已顶到卷尾边界（tx clamp 上界 0） */
+  const panBy = useCallback(
+    (dxScreen: number): { atEnd: boolean } => {
+      const v = viewRef.current
+      apply({ zoom: v.zoom, tx: v.tx + dxScreen, ty: v.ty })
+      return { atEnd: viewRef.current.tx >= -0.5 }
+    },
+    [apply],
+  )
+
+  /** animateTo 是否在跑——auto-pan 帧内让路用（绝对插值与增量平移同帧并写会互相覆盖） */
+  const isAnimating = useCallback(() => animRef.current !== null, [])
+
+  /** 重播用：瞬移回初始视图（卷首、实物 100%、垂直居中），无缓动——配合画布淡切遮罩使用 */
+  const resetToStart = useCallback(() => {
+    stopAnim()
+    apply(initialView(sizeRef.current.w, sizeRef.current.h))
+  }, [apply, stopAnim])
+
   // —— 拖拽平移 / 单击放大 ——
   const gesture = useRef<{
     id: number
@@ -232,5 +251,8 @@ export function useViewer() {
     resetToActual,
     jumpToFraction,
     flyToContent,
+    panBy,
+    isAnimating,
+    resetToStart,
   }
 }

@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "title_zh": "春郊乡野",
+    "title_en": "Spring Countryside",
+    "x_start": 120800,
+    "x_end": 160348,
+    "focal_x": 126551,
+    "focal_w": 11061
+  },
+  {
+    "id": 2,
+    "title_zh": "汴河码头",
+    "title_en": "",
+    "x_start": 89170,
+    "x_end": 120800,
+    "focal_x": 107398,
+    "focal_w": 12553
+  },
+  {
+    "id": 3,
+    "title_zh": "飞虹卧波 ",
+    "title_en": "",
+    "x_start": 62031,
+    "x_end": 89170,
+    "focal_x": 82895,
+    "focal_w": 11604
+  },
+  {
+    "id": 4,
+    "title_zh": "关厢街市",
+    "title_en": "",
+    "x_start": 36274,
+    "x_end": 62031,
+    "focal_x": 55469,
+    "focal_w": 11818
+  },
+  {
+    "id": 5,
+    "title_zh": "东京梦华",
+    "title_en": "",
+    "x_start": 0,
+    "x_end": 36274,
+    "focal_x": 28223,
+    "focal_w": 15961
+  }
+]

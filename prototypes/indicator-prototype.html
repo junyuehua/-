@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Indicator + 引线机制 · 功能验证原型</title>
+<style>
+  :root {
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #1c1c1c;
+    color: #eee;
+    overflow: hidden;
+  }
+
+  /* ---------- 顶部工具条（纯功能，不管美观） ---------- */
+  #toolbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 64px;
+    background: #262626;
+    border-bottom: 1px solid #3a3a3a;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 16px;
+    z-index: 100;
+    font-size: 13px;
+  }
+  #toolbar button {
+    background: #3a3a3a;
+    border: 1px solid #4d4d4d;
+    color: #eee;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  #toolbar button.active { background: #5b7fb0; border-color: #6f93c4; }
+  #toolbar button:hover { background: #4a4a4a; }
+  #toolbar button.active:hover { background: #6a8ec0; }
+  #instructions {
+    color: #999;
+    line-height: 1.5;
+  }
+  #zoomReadout {
+    margin-left: auto;
+    background: #000;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+    min-width: 70px;
+    text-align: center;
+    border: 1px solid #3a3a3a;
+  }
+
+  /* ---------- 场景容器 ---------- */
+  .scene {
+    position: absolute;
+    top: 64px; left: 0; right: 0; bottom: 0;
+    display: none;
+    overflow: hidden;
+    cursor: grab;
+    background: #2c2a26;
+  }
+  .scene.active { display: block; }
+  .scene.dragging { cursor: grabbing; }
+
+  .world {
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: 0 0;
+    background: #a08a63; /* 占位"绢本"底色，不代表真实画面 */
+  }
+
+  .placeholder-shape {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: rgba(0,0,0,0.55);
+    border: 1px dashed rgba(0,0,0,0.25);
+    background: rgba(0,0,0,0.06);
+    pointer-events: none;
+    white-space: nowrap;
+    padding: 2px 4px;
+  }
+
+  /* ---------- overlay：不随world变换，marker在这里手动定位 ---------- */
+  .overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+  }
+
+  .anchor-mark {
+    position: absolute;
+    width: 10px; height: 10px;
+    margin-left: -5px; margin-top: -5px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .anchor-mark::before, .anchor-mark::after {
+    content: "";
+    position: absolute;
+    background: #ff3b3b;
+  }
+  .anchor-mark::before { left: 4px; top: 0; width: 2px; height: 10px; }
+  .anchor-mark::after { left: 0; top: 4px; width: 10px; height: 2px; }
+
+  .leader-line {
+    position: absolute;
+    height: 1px;
+    background: rgba(255,255,255,0.85);
+    transform-origin: 0 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .marker-dot {
+    position: absolute;
+    width: 14px; height: 14px;
+    margin-left: -7px; margin-top: -7px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.9);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.35);
+    pointer-events: auto;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+  .marker-dot:hover, .marker-dot.hover { transform: scale(1.3); }
+
+  .marker-dot[data-cat="建筑"] { background: #4d7fb0; }
+  .marker-dot[data-cat="人物"] { background: #d9843f; }
+  .marker-dot[data-cat="物件"] { background: #8f63a8; }
+  .marker-dot[data-cat="自然"] { background: #5f9a63; }
+
+  .marker-card {
+    position: absolute;
+    min-width: 180px;
+    max-width: 240px;
+    background: rgba(20,20,20,0.95);
+    border: 1px solid #4d4d4d;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s ease;
+  }
+  .marker-card.show { opacity: 1; }
+  .marker-card .tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-bottom: 4px;
+  }
+  .marker-card[data-cat="建筑"] .tag { background: #4d7fb0; }
+  .marker-card[data-cat="人物"] .tag { background: #d9843f; }
+  .marker-card[data-cat="物件"] .tag { background: #8f63a8; }
+  .marker-card[data-cat="自然"] .tag { background: #5f9a63; }
+  .marker-card .title { font-weight: 600; margin-bottom: 2px; }
+  .marker-card .body { color: #bbb; }
+
+  #legend {
+    position: fixed;
+    bottom: 12px;
+    left: 12px;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 11px;
+    display: flex;
+    gap: 12px;
+    z-index: 100;
+  }
+  #legend span { display: flex; align-items: center; gap: 5px; }
+  #legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <button id="tabScene1" class="active">场景一 · 原始尺寸（10个点）</button>
+  <button id="tabScene2">场景二 · ~500x 参考（1个点）</button>
+  <button id="resetBtn">重置视角</button>
+  <div id="instructions">拖拽平移 · 滚轮缩放（不可低于100%）· 悬停圆点看引线+信息卡 · 红色十字=marker真实锚点，用于肉眼验证缩放精度</div>
+  <div id="zoomReadout">100%</div>
+</div>
+
+<div id="scene1" class="scene active">
+  <div class="world" id="world1"></div>
+  <div class="overlay" id="overlay1"></div>
+</div>
+
+<div id="scene2" class="scene">
+  <div class="world" id="world2"></div>
+  <div class="overlay" id="overlay2"></div>
+</div>
+
+<div id="legend">
+  <span><i style="background:#4d7fb0"></i>建筑</span>
+  <span><i style="background:#d9843f"></i>人物</span>
+  <span><i style="background:#8f63a8"></i>物件</span>
+  <span><i style="background:#5f9a63"></i>自然</span>
+</div>
+
+<script>
+/*
+  说明（给使用者看）：
+  - world 是真正被 CSS transform（translate+scale）变换的层，代表"画面内容本身"。
+  - overlay 完全不参与 transform，marker 的屏幕坐标由 JS 每帧手动计算：
+      anchorScreen = pan + anchorContent * scale   （这一步和 world 用的是同一套变换数学，
+                                                       所以锚点永远和画面内容像素级对齐）
+      dotScreen    = anchorScreen + 固定屏幕像素偏移（不随 scale 变化）
+    这就是我们讨论的"锚点在内容空间、偏移在屏幕空间"的具体实现，用来验证:
+      1) 跨缩放锚点是否精确（看红色十字是否永远贴在同一个内容位置上）
+      2) 偏移量是否会随缩放被不合理放大（固定屏幕像素偏移应该始终是同一个视觉距离）
+      3) 引线是否只在 hover 时出现，静止状态是否干净
+*/
+
+const MIN_SCALE = 1;
+const MAX_SCALE = 8;
+
+function makeScene(sceneId, worldId, overlayId, worldW, worldH, shapes, markers, imageSrc) {
+  const sceneEl = document.getElementById(sceneId);
+  const worldEl = document.getElementById(worldId);
+  const overlayEl = document.getElementById(overlayId);
+
+  worldEl.style.width = worldW + 'px';
+  worldEl.style.height = worldH + 'px';
+
+  // 真实画面素材（原图原始像素尺寸，100%时1:1映射，不做任何缩放假设）
+  if (imageSrc) {
+    const img = document.createElement('img');
+    img.src = imageSrc;
+    img.width = worldW;
+    img.height = worldH;
+    img.style.position = 'absolute';
+    img.style.left = '0';
+    img.style.top = '0';
+    img.style.display = 'block';
+    img.draggable = false;
+    worldEl.appendChild(img);
+  }
+
+  // 占位形状（可选），纯粹给肉眼一个参照物，不代表真实画面
+  shapes.forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'placeholder-shape';
+    el.style.left = s.x + 'px';
+    el.style.top = s.y + 'px';
+    el.style.width = s.w + 'px';
+    el.style.height = s.h + 'px';
+    el.textContent = s.label || '';
+    worldEl.appendChild(el);
+  });
+
+  const state = {
+    scale: 1,
+    panX: 20,
+    panY: 20,
+    dragging: false,
+    lastX: 0,
+    lastY: 0,
+    markers: []
+  };
+
+  markers.forEach(m => {
+    const dot = document.createElement('div');
+    dot.className = 'marker-dot';
+    dot.setAttribute('data-cat', m.cat);
+
+    const line = document.createElement('div');
+    line.className = 'leader-line';
+
+    const anchorMark = document.createElement('div');
+    anchorMark.className = 'anchor-mark';
+
+    const card = document.createElement('div');
+    card.className = 'marker-card';
+    card.setAttribute('data-cat', m.cat);
+    card.innerHTML = `<div class="tag">${m.cat}</div><div class="title">${m.title}</div><div class="body">${m.body}</div>`;
+
+    overlayEl.appendChild(line);
+    overlayEl.appendChild(anchorMark);
+    overlayEl.appendChild(dot);
+    overlayEl.appendChild(card);
+
+    function setHover(on) {
+      line.style.opacity = on ? 1 : 0;
+      anchorMark.style.opacity = on ? 1 : 0;
+      card.classList.toggle('show', on);
+      dot.classList.toggle('hover', on);
+    }
+    dot.addEventListener('mouseenter', () => setHover(true));
+    dot.addEventListener('mouseleave', () => setHover(false));
+
+    state.markers.push({
+      x: m.x, y: m.y,
+      offsetX: m.offsetX, offsetY: m.offsetY,
+      dot, line, anchorMark, card
+    });
+  });
+
+  function render() {
+    worldEl.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.scale})`;
+
+    state.markers.forEach(m => {
+      const anchorScreenX = state.panX + m.x * state.scale;
+      const anchorScreenY = state.panY + m.y * state.scale;
+      const dotX = anchorScreenX + m.offsetX; // 固定屏幕像素偏移，不乘scale
+      const dotY = anchorScreenY + m.offsetY;
+
+      m.dot.style.left = dotX + 'px';
+      m.dot.style.top = dotY + 'px';
+      m.anchorMark.style.left = anchorScreenX + 'px';
+      m.anchorMark.style.top = anchorScreenY + 'px';
+
+      const dx = anchorScreenX - dotX;
+      const dy = anchorScreenY - dotY;
+      const length = Math.sqrt(dx*dx + dy*dy);
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      m.line.style.left = dotX + 'px';
+      m.line.style.top = dotY + 'px';
+      m.line.style.width = length + 'px';
+      m.line.style.transform = `rotate(${angle}deg)`;
+
+      // 信息卡放在dot旁边，简单避免遮住dot本身
+      m.card.style.left = (dotX + 14) + 'px';
+      m.card.style.top = (dotY - 10) + 'px';
+    });
+
+    zoomReadout.textContent = Math.round(state.scale * 100) + '%';
+  }
+
+  function clampScale(s) { return Math.min(Math.max(s, MIN_SCALE), MAX_SCALE); }
+
+  sceneEl.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = sceneEl.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const worldX = (mouseX - state.panX) / state.scale;
+    const worldY = (mouseY - state.panY) / state.scale;
+
+    const delta = -e.deltaY * 0.0015;
+    const newScale = clampScale(state.scale * (1 + delta));
+
+    state.panX = mouseX - worldX * newScale;
+    state.panY = mouseY - worldY * newScale;
+    state.scale = newScale;
+    render();
+  }, { passive: false });
+
+  sceneEl.addEventListener('mousedown', (e) => {
+    if (e.target.classList.contains('marker-dot')) return;
+    state.dragging = true;
+    state.lastX = e.clientX;
+    state.lastY = e.clientY;
+    sceneEl.classList.add('dragging');
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!state.dragging) return;
+    state.panX += e.clientX - state.lastX;
+    state.panY += e.clientY - state.lastY;
+    state.lastX = e.clientX;
+    state.lastY = e.clientY;
+    render();
+  });
+  window.addEventListener('mouseup', () => {
+    state.dragging = false;
+    sceneEl.classList.remove('dragging');
+  });
+
+  render();
+
+  return {
+    reset() {
+      state.scale = 1;
+      state.panX = 20;
+      state.panY = 20;
+      render();
+    }
+  };
+}
+
+const zoomReadout = document.getElementById('zoomReadout');
+
+// ---------------- 场景一：原始尺寸（真实图片，2487x622原始像素），10个点 ----------------
+// 注：坐标是在真实图片上目测估的大致位置，用于验证机制，不是逐点核实过的美术史标注
+const scene1Shapes = [];
+
+const scene1Markers = [
+  { x: 124,  y: 100, cat: '建筑', title: '临水建筑', body: '示例文案：介绍这处建筑的历史信息。', offsetX: -30, offsetY: -34 },
+  { x: 373,  y: 249, cat: '物件', title: '漕运货船', body: '示例文案：船只结构与运输功能。', offsetX: 34, offsetY: -30 },
+  { x: 124,  y: 311, cat: '人物', title: '码头脚夫', body: '示例文案：码头劳作场景。', offsetX: -32, offsetY: 30 },
+  { x: 908,  y: 149, cat: '建筑', title: '沿街建筑群', body: '示例文案：市井建筑样式。', offsetX: 30, offsetY: -32 },
+  { x: 1206, y: 199, cat: '人物', title: '市集人群', body: '示例文案：商业往来场景。', offsetX: 30, offsetY: -28 },
+  { x: 1069, y: 348, cat: '物件', title: '篷盖/器具', body: '示例文案：日常器具或篷具。', offsetX: -30, offsetY: 30 },
+  { x: 1467, y: 336, cat: '自然', title: '老树', body: '示例文案：季节与植被信息，对应场景二的高倍参考点。', offsetX: 32, offsetY: -30 },
+  { x: 1293, y: 498, cat: '人物', title: '树下劳作人物', body: '示例文案：河岸边的劳作场景。', offsetX: -30, offsetY: 30 },
+  { x: 1766, y: 323, cat: '建筑', title: '临河小屋', body: '示例文案：民居建筑形式。', offsetX: 30, offsetY: -30 },
+  { x: 2325, y: 373, cat: '人物', title: '骑者与树丛', body: '示例文案：往来行旅。', offsetX: -30, offsetY: 30 },
+];
+
+const scene1 = makeScene('scene1', 'world1', 'overlay1', 2487, 622, scene1Shapes, scene1Markers, 'assets/qingming-full.png');
+
+// ---------------- 场景二：真实~7x裁切放大（模拟高倍参考），1个点 ----------------
+// 裁切自场景一"老树"锚点周围150x150原图像素区域，放大7倍保存为1050x1050
+const scene2Shapes = [];
+const scene2Markers = [
+  { x: 520, y: 470, cat: '自然', title: '树干分枝细节', body: '示例：验证同一套marker机制在真实高倍裁切图上是否依然精确贴合、偏移是否保持恒定屏幕距离。这个锚点对应场景一"老树"那个点在原图上的同一位置。', offsetX: 30, offsetY: -30 },
+];
+const scene2 = makeScene('scene2', 'world2', 'overlay2', 1050, 1050, scene2Shapes, scene2Markers, 'assets/qingming-crop.png');
+
+// ---------------- 切换 tab ----------------
+const tab1 = document.getElementById('tabScene1');
+const tab2 = document.getElementById('tabScene2');
+const s1 = document.getElementById('scene1');
+const s2 = document.getElementById('scene2');
+const resetBtn = document.getElementById('resetBtn');
+
+let activeScene = 'scene1';
+
+tab1.addEventListener('click', () => {
+  activeScene = 'scene1';
+  tab1.classList.add('active'); tab2.classList.remove('active');
+  s1.classList.add('active'); s2.classList.remove('active');
+  zoomReadout.textContent = '100%';
+});
+tab2.addEventListener('click', () => {
+  activeScene = 'scene2';
+  tab2.classList.add('active'); tab1.classList.remove('active');
+  s2.classList.add('active'); s1.classList.remove('active');
+  zoomReadout.textContent = '100%';
+});
+resetBtn.addEventListener('click', () => {
+  if (activeScene === 'scene1') scene1.reset();
+  else scene2.reset();
+});
+
+</script>
+</body>
+</html>

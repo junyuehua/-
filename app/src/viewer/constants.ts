@@ -59,10 +59,18 @@ export const TOAST_HIDE_MS = 1200
 export const MIN_VIEWPORT_W = 1024
 export const MIN_VIEWPORT_H = 640
 
-/** 沉浸模式：顶部/底部唤醒热区高度 与 离开热区的隐藏缓冲 */
+/** 神游模式：顶部/底部唤醒热区高度 与 离开热区的隐藏缓冲 */
 export const EDGE_ZONE_TOP_PX = 120
 export const EDGE_ZONE_BOTTOM_PX = 160
 export const UI_LEAVE_DELAY_MS = 200
+
+/* —— 卧游/神游共用的自动平移引擎（PRD §3.2，数值全部待实测调参）—— */
+/** 平移锁屏幕速度恒定（非内容速度）：放大后卷上推进自然变慢，视觉节奏一致 */
+export const AUTO_PAN_SPEED_PX_S = 72
+/** 悬停缓停的时间常数（速度乘子指数逼近 0，非硬刹；刹车距离 ≈ speed×tau ≈ 16px） */
+export const AUTO_PAN_STOP_TAU_MS = 220
+/** 缓起的时间常数（悬停移开/scrub 松手/切入模式后从 0 缓起） */
+export const AUTO_PAN_RESUME_TAU_MS = 380
 
 /* —— 标注 marker：朱笔圈点（实物 100% 以内为固定屏幕像素；超过后随缩放温和放大，见 markerGrowth）—— */
 /** 圈的大小＝层级：地标大圈 / 场景中圈 / 细节小圈，三档离散、档间留足间距 */

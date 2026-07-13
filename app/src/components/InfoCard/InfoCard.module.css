@@ -1,6 +1,7 @@
 /* Figma 卡片wraper 63:208（2026-07-11 更新）：250 宽 / 纸面80% / p8 radius2；内层金字描边 p16 gap8 */
 .card {
-  width: 250px;
+  width: auto;
+  max-width: 250px;
   padding: 8px;
   background: var(--paper-80);
   border-radius: var(--radius-sm);
@@ -18,7 +19,7 @@
 /* 印章相对标题（含多行）垂直居中——用户定稿 2026-07-11 */
 .titleRow {
   display: flex;
-  align-items: center;
+  align-items: top;
   gap: 4px;
 }
 
@@ -30,7 +31,7 @@
   font-family: var(--font-kanji);
   font-size: 22px;
   font-weight: 400;
-  line-height: normal;
+  line-height: 32px;
   color: var(--text-black);
 }
 
@@ -58,13 +59,11 @@
   scrollbar-width: none;
   --fade-t: 0px;
   --fade-b: 0px;
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 var(--fade-t),
-    #000 calc(100% - var(--fade-b)),
-    transparent 100%
-  );
+  mask-image: linear-gradient(to bottom,
+      transparent 0,
+      #000 var(--fade-t),
+      #000 calc(100% - var(--fade-b)),
+      transparent 100%);
   transition:
     --fade-t 250ms ease,
     --fade-b 250ms ease;

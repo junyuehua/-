@@ -1,6 +1,9 @@
+/* 刻本宋：信息卡标题等处（--font-kanji）。子集化产物（2026-07-13：7.8MB TTF → ~160KB woff2）：
+   字集 = annotations.json 标题 + segments.json 标题 + 固定 UI 文案，由 scripts/subset-kanben.sh 生成；
+   **加了新标注后重跑该脚本**（缺字会回退 Noto Serif SC，可读但风格略异）。原 TTF 留作子集化源文件 */
 @font-face {
   font-family: "AaGuDianKeBenSongYMB";
-  src: url("../assets/fonts/AaGuDianKeBenSongYouMoBan.ttf") format("truetype");
+  src: url("../assets/fonts/KanbenSong-subset.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;

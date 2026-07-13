@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { InfoCard } from '../components/InfoCard/InfoCard'
 import circle1Raw from '../assets/markers/circle-1.svg?raw'
@@ -65,10 +65,12 @@ interface MarkerLayerProps {
   annotations: Annotation[]
   view: ViewState
   size: { w: number; h: number }
-  /** 学习模式可见；沉浸模式整层淡出（交互一并禁用） */
+  /** 读画/卧游可见；神游整层淡出（交互一并禁用） */
   visible: boolean
   /** 以屏幕点为锚缩放（复用 useViewer 的锚定数学） */
   zoomAtPoint: (ax: number, ay: number, zoom: number, animate: boolean) => void
+  /** 上报"悬停/信息卡是否存活"——卧游自动平移的缓停/缓起信号（PRD §3.2） */
+  onHoverActiveChange?: (active: boolean) => void
 }
 
 /**
@@ -76,7 +78,14 @@ interface MarkerLayerProps {
  * mix-blend-multiply 的"进绢"质感才能与下方绢本相乘生效；信息卡通过 portal 渲染到
  * body（独立高 z 层，不参与混合、可压过顶部 UI）。
  */
-export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: MarkerLayerProps) {
+export function MarkerLayer({
+  annotations,
+  view,
+  size,
+  visible,
+  zoomAtPoint,
+  onHoverActiveChange,
+}: MarkerLayerProps) {
   const [hoveredId, setHoveredId] = useState<number | null>(null)
   const leaveTimer = useRef<number | undefined>(undefined)
 
@@ -182,6 +191,22 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
 
   const hoveredSingle = hoveredId !== null ? singles.find((p) => p.a.id === hoveredId) : undefined
 
+  // —— 失效悬停清理（防卧游平移死锁）：被悬停的点位因缩放/分层显隐/并入聚合从 singles 消失，
+  // 或整层隐藏（切神游）时，DOM 卸载不会触发 mouseleave——必须主动清掉悬停态与离开计时器 ——
+  useEffect(() => {
+    if (hoveredId === null) return
+    if (visible && hoveredSingle) return
+    window.clearTimeout(leaveTimer.current)
+    setHoveredId(null)
+  }, [hoveredId, hoveredSingle, visible])
+
+  // —— 上报悬停存活（以 hoveredSingle 是否真实存在为准，而非 hoveredId）：
+  // 卧游模式据此缓停/缓起自动平移；"移开→卡片 280ms 缓冲消失→缓起"由 leaveTimer 天然延迟 ——
+  const hoverActive = visible && hoveredSingle !== undefined
+  useEffect(() => {
+    onHoverActiveChange?.(hoverActive)
+  }, [hoverActive, onHoverActiveChange])
+
   // 高倍缩放温和放大（实物 100% 以内 growth=1，即原固定屏幕像素行为）；单圈与聚合统一
   const growth = markerGrowth(view.zoom)
 
@@ -215,12 +240,14 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
       <div className={`${styles.layer} ${visible ? '' : styles.layerHidden}`}>
         {singles.map((p) => {
           const d = (MARKER_SIZE[p.a.tier] ?? MARKER_SIZE.场景) * growth
-          const hitSize = MARKER_HIT_SIZE * growth
+          const isHovered = hoveredId === p.a.id
+          // 悬停态热区加倍（粘性滞回）：卧游缓停期间锚点还会随刹车滑行 ~speed×tau≈16px，
+          // 若热区不加大，标记会从静止的光标下滑走→误判 mouseleave→卡片闪退、平移又缓起
+          const hitSize = MARKER_HIT_SIZE * growth * (isHovered ? 2 : 1)
           const variant = CIRCLE_VARIANTS[p.a.id % CIRCLE_VARIANTS.length]
           // 墨量浓淡：Knuth 乘法哈希（与 id%3 的笔触选择去相关），multiply 下淡=印得浅
           const inkHash = ((p.a.id * 2654435761) >>> 16) % 1024
           const ink = MARKER_INK_MIN + (MARKER_INK_MAX - MARKER_INK_MIN) * (inkHash / 1023)
-          const isHovered = hoveredId === p.a.id
           return (
             <div
               key={p.a.id}
@@ -265,7 +292,7 @@ export function MarkerLayer({ annotations, view, size, visible, zoomAtPoint }: M
               }}
             >
               <img src={clusterBlob} alt="" draggable={false} className={styles.clusterBlob} />
-              <span className={styles.clusterCount} style={{ fontSize: 14 * growth }}>
+              <span className={styles.clusterCount} style={{ fontSize: 16 * growth }}>
                 {g.members.length <= 9 ? CLUSTER_NUMERALS[g.members.length - 1] : '众'}
               </span>
             </span>

@@ -84,14 +84,18 @@
   -webkit-user-drag: none;
 }
 
-/* —— 中央列：纸页内水平居中、内部左对齐；止步于底部 CTA 区上缘（120px）—— */
+/* —— 中央列：在「标题右缘(112px)→纸页右缘」区间内水平居中（159:155，2026-07-12 改，
+   取代"相对整个纸页居中"——纯纸页居中被标题挤得视觉上不像居中）；内部左对齐；
+   止步于底部 CTA 区上缘（120px）。112 + (W−112)/2 = W/2 + 56 → left: calc(50% + 56px) */
 .center {
   position: absolute;
-  left: 50%;
+  left: calc(50% + 56px);
   top: 48px;
   bottom: 120px;
   transform: translateX(-50%);
-  width: 725px;
+  /* 2026-07-12 用户拍板：正文每行 ≤30 字（原 Figma 725px ≈ 40 字/行，太长不利阅读）；
+     18px × 30 = 540px（中文等宽，标点同 1em，字数即像素） */
+  width: 540px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -112,9 +116,16 @@
     #000 calc(100% - var(--fade-b)),
     transparent 100%
   );
+  opacity: 1;
   transition:
     --fade-t 250ms ease,
-    --fade-b 250ms ease;
+    --fade-b 250ms ease,
+    opacity 160ms ease; /* tab 切换淡入淡出（时长同 TAB_FADE_MS） */
+}
+
+/* tab 切换中：正文淡出；shownId 跟上 activeId 后类名移除、自动淡回 */
+.bodySwitching {
+  opacity: 0;
 }
 
 .body::-webkit-scrollbar {
@@ -144,6 +155,42 @@
 .citationText a {
   color: var(--ui-red);
   text-decoration: underline;
+}
+
+/* —— 参考资料（150:1252）：标题 14 Bold + 分组列表（组名 12 Bold / 条目 12 Regular，行高 2），
+   与正文间隔 24（外层列 gap 的规格），全部字黑，随正文滚动 —— */
+.refs {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.refsTitle {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: normal;
+  color: var(--text-black);
+}
+
+.refGroup {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 2;
+  color: var(--text-black);
+}
+
+.refItem {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 2;
+  color: var(--text-black);
 }
 
 /* 金色引用块：同信息卡（2px UI金竖条），字号/行高随卷首正文 */
@@ -184,7 +231,7 @@
   pointer-events: none;
 }
 
-/* CTA 展阅（110:3601）：UI红 / 白字 22px Bold / 字距 3.3px / p 8×32 / 圆角 2 */
+/* CTA 展阅（164:404，2026-07-13 对齐改版）：UI红 / 白字 18px Bold / 字距 0.15em / p 8×32 / 圆角 2 */
 .cta {
   pointer-events: auto;
   padding: 8px 32px;
@@ -192,24 +239,29 @@
   border: none;
   border-radius: var(--radius-sm);
   font-family: var(--font-serif);
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
-  letter-spacing: 3.3px;
+  letter-spacing: 0.15em;
   color: var(--text-white);
   white-space: nowrap;
   cursor: pointer;
-  transition: filter 120ms ease;
+  transition: background-color 120ms ease;
 }
 
-/* hover 态 Figma 未给：先用轻微加深，终稿出来再调 */
+/* hover 态（164:405 定稿）：UI红降到 95% 不透明，微微透出纸面 */
 .cta:hover {
-  filter: brightness(0.95);
+  background: rgba(185, 58, 38, 0.95);
 }
 
-/* 重开形态的 CTA「关闭」（152:1270）：UI金底 + 字金，几何与「展阅」相同 */
+/* 重开形态的 CTA「关闭」（164:410）：UI金底 + 字金，几何与「展阅」相同 */
 .ctaClose {
   background: var(--ui-gold);
   color: var(--text-gold);
+}
+
+/* hover 态（164:411 定稿）：UI金提亮到 #EAE0CB */
+.ctaClose:hover {
+  background: #eae0cb;
 }
 
 /* 重开形态：纸页外的背景可点击关闭，光标给出提示 */
@@ -321,11 +373,34 @@
   }
 }
 
+/* —— 首次进入·素淡入变体（2026-07-12 与墨染并存探索中，开关 = ScrollIntro.tsx 的
+   FIRST_ENTRANCE）——纸页整体（含内容，一层不拆）单一 opacity 淡入：400ms 静场后
+   1800ms；曲线前段压低（ease-in 的"缓起"），尾段仍缓落收住——纯 ease-in 会在
+   终点以最大速度定格、读作"啪"一下，故取前重后缓的 S 曲线。纸页保留常态外观
+   （paper-80+纹理），无 mask、无预合成、无分层 */
+.wrapperFade .sheet {
+  animation: sheetFade 1200ms cubic-bezier(0.55, 0.06, 0.35, 1) 400ms both;
+}
+
+/* 上浮动势 24px（2026-07-12 用户加）：与淡入同曲线同长，含蓄不抢戏；
+   注意 .sheet 常态自带 translate(-50%,-50%) 居中，关键帧必须复合写全 */
+@keyframes sheetFade {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 8px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
 /* 无障碍：偏好减少动效时全部立即就位，只留 wrapper 自身的普通淡入。
    注意 .inkWindow 静态 transform 为 scale(1)、盖不满纸页——必须同时去掉 mask */
 @media (prefers-reduced-motion: reduce) {
   .inkWindow,
   .inkTexture,
+  .wrapperFade .sheet,
   .wrapperFirst .left,
   .wrapperFirst .center,
   .wrapperFirst .bottom {
