@@ -64,6 +64,14 @@ export const EDGE_ZONE_TOP_PX = 120
 export const EDGE_ZONE_BOTTOM_PX = 160
 export const UI_LEAVE_DELAY_MS = 200
 
+/**
+ * 底部导览条高度（NavBar：`height: 4.4vw`，与 NavBar.module.css 保持同步）。
+ * 垂直平移钳制为它预留空间，让画面底边能拉到导览条上沿之上（否则底部内容永远被这条不透明金条压住，
+ * 见修复：中等缩放下画高略大于视口时底部细节看不全）。为保持"切模式镜头不动"，此预留与模式无关、常驻——
+ * 代价：神游/卧游 UI 隐藏时把画面拉到最底会露出约这么高的一条背景（仅极限位置可见）。
+ */
+export const NAVBAR_HEIGHT = (vw: number) => vw * 0.044
+
 /* —— 卧游/神游共用的自动平移引擎（PRD §3.2，数值全部待实测调参）—— */
 /** 平移锁屏幕速度恒定（非内容速度）：放大后卷上推进自然变慢，视觉节奏一致 */
 export const AUTO_PAN_SPEED_PX_S = 72

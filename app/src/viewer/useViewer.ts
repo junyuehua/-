@@ -8,6 +8,7 @@ import {
   fitZoom,
   JUMP_MS,
   MAX_ZOOM,
+  NAVBAR_HEIGHT,
   PHYSICAL_1_ZOOM,
   WHEEL_ZOOM_SENSITIVITY,
 } from './constants'
@@ -27,7 +28,9 @@ function clampView(v: ViewState, vw: number, vh: number): ViewState {
   const w = CONTENT_W * zoom
   const h = CONTENT_H * zoom
   const tx = w <= vw ? (vw - w) / 2 : Math.min(0, Math.max(vw - w, v.tx))
-  const ty = h <= vh ? (vh - h) / 2 : Math.min(0, Math.max(vh - h, v.ty))
+  // 底部为导览条预留空间：可视区下界抬到 vh - 导览条高，画面底边才能拉到导览条上沿之上（见 NAVBAR_HEIGHT 注释）
+  const vhUsable = vh - NAVBAR_HEIGHT(vw)
+  const ty = h <= vhUsable ? (vhUsable - h) / 2 : Math.min(0, Math.max(vhUsable - h, v.ty))
   return { zoom, tx, ty }
 }
 
