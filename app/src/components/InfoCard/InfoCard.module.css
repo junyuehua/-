@@ -1,7 +1,8 @@
 /* Figma 卡片wraper 63:208（2026-07-11 更新）：250 宽 / 纸面80% / p8 radius2；内层金字描边 p16 gap8 */
 .card {
   width: auto;
-  max-width: 250px;
+  /* 尺寸开了两个变量口子给移动端 modal（InfoModal）覆盖；缺省 = 桌面悬停卡原值 */
+  max-width: var(--infocard-max-w, 250px);
   padding: 8px;
   background: var(--paper-80);
   border-radius: var(--radius-sm);
@@ -54,7 +55,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 320px;
+  max-height: var(--infocard-body-max-h, 320px);
   overflow-y: auto;
   scrollbar-width: none;
   --fade-t: 0px;

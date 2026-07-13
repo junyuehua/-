@@ -12,9 +12,11 @@ interface InfoCardProps {
    * 传 JSX 时原样渲染。为空时不渲染正文区（标题上下留白保持对称）
    */
   children?: ReactNode
+  /** 追加到卡片根节点：挂载方用 --infocard-max-w / --infocard-body-max-h 改尺寸（移动端 modal） */
+  className?: string
 }
 
-export function InfoCard({ category, title, children }: InfoCardProps) {
+export function InfoCard({ category, title, children, className }: InfoCardProps) {
   const hasBody = children != null && (typeof children !== 'string' || children.trim() !== '')
   // 滚动边缘渐隐：顶部/底部各自只在"该方向还有内容滚出可读范围"时出现
   const { ref: bodyRef, fade, update: updateFade } = useScrollFade()
@@ -24,7 +26,7 @@ export function InfoCard({ category, title, children }: InfoCardProps) {
   }, [children, updateFade])
 
   return (
-    <div className={styles.card}>
+    <div className={`${styles.card} ${className ?? ''}`}>
       <div className={styles.inner}>
         <div className={styles.titleRow}>
           <CategorySeal category={category} />

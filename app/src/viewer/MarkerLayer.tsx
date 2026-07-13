@@ -21,8 +21,7 @@ import {
   MARKER_SIZE,
   markerGrowth,
   MAX_ZOOM,
-  PHYSICAL_1_ZOOM,
-  TIER_REVEAL,
+  MOBILE_MARKER_HIT_SIZE,
 } from './constants'
 import { categoryOf, type Annotation } from './annotations'
 import type { ViewState } from './useViewer'
@@ -36,21 +35,11 @@ const CIRCLE_VARIANTS = [
   { raw: circle3Raw, aspect: 17.2631 / 18.2047 },
 ]
 
-/** 分层显隐：返回 0-1 的可见度（淡入区间内线性过渡），0 = 不渲染也不参与聚合 */
-function tierFactor(tier: Annotation['tier'], zoom: number): number {
-  const reveal = TIER_REVEAL[tier]
-  if (!reveal) return 1
-  const ratio = zoom / PHYSICAL_1_ZOOM
-  return Math.min(1, Math.max(0, (ratio - reveal.start) / (reveal.end - reveal.start)))
-}
-
 interface Placed {
   a: Annotation
   /** 锚点屏幕坐标（含 pan/zoom 变换，不含 marker 偏移） */
   sx: number
   sy: number
-  /** 分层显隐可见度（透明度乘子） */
-  factor: number
 }
 
 interface ClusterGroup {
@@ -58,7 +47,6 @@ interface ClusterGroup {
   cx: number
   cy: number
   members: Placed[]
-  factor: number
 }
 
 interface MarkerLayerProps {
@@ -71,6 +59,12 @@ interface MarkerLayerProps {
   zoomAtPoint: (ax: number, ay: number, zoom: number, animate: boolean) => void
   /** 上报"悬停/信息卡是否存活"——卧游自动平移的缓停/缓起信号（PRD §3.2） */
   onHoverActiveChange?: (active: boolean) => void
+  /**
+   * 移动端 tap 模式（移动端规格 §2）：传入即整层切换为触摸交互——
+   * tap 标识点 = 直接出居中 modal（由挂载方渲染），不做悬停卡也不做"点击=放大"；
+   * 热区基准放大到 44pt；聚合点击行为不变（放大裂散）
+   */
+  onTapAnnotation?: (a: Annotation) => void
 }
 
 /**
@@ -85,7 +79,9 @@ export function MarkerLayer({
   visible,
   zoomAtPoint,
   onHoverActiveChange,
+  onTapAnnotation,
 }: MarkerLayerProps) {
+  const tapMode = onTapAnnotation !== undefined
   const [hoveredId, setHoveredId] = useState<number | null>(null)
   const leaveTimer = useRef<number | undefined>(undefined)
 
@@ -99,12 +95,13 @@ export function MarkerLayer({
     leaveTimer.current = window.setTimeout(() => setHoveredId(null), HOVER_LEAVE_MS)
   }, [])
 
-  // —— 投影到屏幕 + 分层显隐过滤 + 视口裁剪 + 聚合 ——
+  // —— 投影到屏幕 + 视口裁剪 + 聚合 ——
+  // 全 tier 任何缩放常显（2026-07-13 拍板，先在移动端验证后推广到桌面，取代原分层显隐门槛）：
+  // 密度全交给聚合——聚合标记不指向单个元素、只说"这里有东西"，绕开了旧规则
+  // "缩太小元素看不清，圈是多余信息"的隐藏理由；总览时的一串聚合珠正好是内容热力图
   const { singles, clusters } = useMemo(() => {
     const placed: Placed[] = []
     for (const a of annotations) {
-      const factor = tierFactor(a.tier, view.zoom)
-      if (factor <= 0.01) continue
       const sx = a.x * view.zoom + view.tx + MARKER_OFFSET.x
       const sy = a.y * view.zoom + view.ty + MARKER_OFFSET.y
       if (
@@ -115,7 +112,7 @@ export function MarkerLayer({
       ) {
         continue
       }
-      placed.push({ a, sx, sy, factor })
+      placed.push({ a, sx, sy })
     }
 
     // 地标层不参与聚合（PRD §3.8）；场景/细节按屏幕像素距离贪心归簇
@@ -136,9 +133,8 @@ export function MarkerLayer({
         best.members.push(p)
         best.cx = best.members.reduce((s, m) => s + m.sx, 0) / best.members.length
         best.cy = best.members.reduce((s, m) => s + m.sy, 0) / best.members.length
-        best.factor = Math.max(best.factor, p.factor)
       } else {
-        groups.push({ key: '', cx: p.sx, cy: p.sy, members: [p], factor: p.factor })
+        groups.push({ key: '', cx: p.sx, cy: p.sy, members: [p] })
       }
     }
     const clusters: ClusterGroup[] = []
@@ -191,7 +187,7 @@ export function MarkerLayer({
 
   const hoveredSingle = hoveredId !== null ? singles.find((p) => p.a.id === hoveredId) : undefined
 
-  // —— 失效悬停清理（防卧游平移死锁）：被悬停的点位因缩放/分层显隐/并入聚合从 singles 消失，
+  // —— 失效悬停清理（防卧游平移死锁）：被悬停的点位因缩放并入聚合从 singles 消失，
   // 或整层隐藏（切神游）时，DOM 卸载不会触发 mouseleave——必须主动清掉悬停态与离开计时器 ——
   useEffect(() => {
     if (hoveredId === null) return
@@ -243,7 +239,8 @@ export function MarkerLayer({
           const isHovered = hoveredId === p.a.id
           // 悬停态热区加倍（粘性滞回）：卧游缓停期间锚点还会随刹车滑行 ~speed×tau≈16px，
           // 若热区不加大，标记会从静止的光标下滑走→误判 mouseleave→卡片闪退、平移又缓起
-          const hitSize = MARKER_HIT_SIZE * growth * (isHovered ? 2 : 1)
+          // tap 模式：基准直接用 44pt（移动端规格 §6），无悬停滞回
+          const hitSize = (tapMode ? MOBILE_MARKER_HIT_SIZE : MARKER_HIT_SIZE * (isHovered ? 2 : 1)) * growth
           const variant = CIRCLE_VARIANTS[p.a.id % CIRCLE_VARIANTS.length]
           // 墨量浓淡：Knuth 乘法哈希（与 id%3 的笔触选择去相关），multiply 下淡=印得浅
           const inkHash = ((p.a.id * 2654435761) >>> 16) % 1024
@@ -253,18 +250,22 @@ export function MarkerLayer({
               key={p.a.id}
               className={styles.hit}
               style={{ left: p.sx, top: p.sy, width: hitSize, height: hitSize }}
-              onMouseEnter={() => hoverEnter(p.a.id)}
-              onMouseLeave={hoverLeave}
+              onMouseEnter={tapMode ? undefined : () => hoverEnter(p.a.id)}
+              onMouseLeave={tapMode ? undefined : hoverLeave}
               onPointerDown={stop}
               onPointerUp={stop}
               onClick={(e) => {
                 e.stopPropagation()
-                zoomToAnchor(p.a)
+                if (tapMode) {
+                  onTapAnnotation?.(p.a)
+                } else {
+                  zoomToAnchor(p.a)
+                }
               }}
             >
               <span
                 className={`${styles.circle} ${p.a.tier === '细节' ? styles.circleThick : ''} ${isHovered ? styles.markerHidden : ''}`}
-                style={{ height: d, width: d * variant.aspect, opacity: p.factor * ink }}
+                style={{ height: d, width: d * variant.aspect, opacity: ink }}
                 dangerouslySetInnerHTML={{ __html: variant.raw }}
               />
             </div>
@@ -286,7 +287,6 @@ export function MarkerLayer({
             <span
               className={styles.cluster}
               style={{
-                opacity: g.factor,
                 width: CLUSTER_MARKER_SIZE * growth,
                 height: CLUSTER_MARKER_SIZE * growth,
               }}
@@ -300,8 +300,10 @@ export function MarkerLayer({
         ))}
       </div>
 
-      {/* 卡片 portal 到 body：独立于画布 stacking context，z 高于顶部 UI（允许压过） */}
+      {/* 卡片 portal 到 body：独立于画布 stacking context，z 高于顶部 UI（允许压过）；
+          tap 模式无悬停卡——信息卡由挂载方以居中 modal 呈现 */}
       {visible &&
+        !tapMode &&
         hoveredSingle &&
         createPortal(
           <div className={styles.cardLayer}>

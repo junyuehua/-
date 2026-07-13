@@ -271,6 +271,9 @@
 
 .wrapperDismiss .sheet {
   cursor: auto;
+  /* 重开也复用素淡入（2026-07-13 用户点名）：同曲线同长同 8px 上浮，
+     但无首次的 400ms 静场延迟——那是给底图独享的，重开随取随用 */
+  animation: sheetFade 1200ms cubic-bezier(0.55, 0.06, 0.35, 1) both;
 }
 
 /* —— 首次进入的墨染入场（2026-07-12 三版：合成器纯动画，根治尾段顿挫）——
@@ -395,12 +398,115 @@
   }
 }
 
+/* ————————————————————————————————————————————————————————————————
+   移动端（Figma 218:1545，移动端规格 §7/§8；挂在 platform.ts 落的 data-platform 上）：
+   整屏即纸页（非居中纸页卡），padding 24；标题改横排 40px + 小朱印同行；
+   tab 行 full-bleed 横向滚动（两端停在 padding 24 线上）；正文 16/2.2；CTA 通栏。
+   字号是独立的移动 token（40/16/14 tab 不变），不从桌面 64/18 线性换算 —— */
+:global([data-platform='mobile']) .sheet,
+:global([data-platform='mobile']) .sheetFirst {
+  left: 0;
+  top: 0;
+  transform: none;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: max(24px, env(safe-area-inset-top, 0px)) 24px max(24px, env(safe-area-inset-bottom, 0px));
+}
+
+/* 素淡入的关键帧带着桌面的 translate(-50%,-50%) 居中——移动端换一套纯位移版（首次与重开同） */
+:global([data-platform='mobile']) .wrapperFade .sheet,
+:global([data-platform='mobile']) .wrapperDismiss .sheet {
+  animation-name: sheetFadeMobile;
+}
+
+@keyframes sheetFadeMobile {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 标题行：横排瘦金体 40px + 朱印 34×35 同行（Figma 219:1665，gap 8） */
+:global([data-platform='mobile']) .left {
+  position: static;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+:global([data-platform='mobile']) .title {
+  flex-direction: row;
+  width: auto;
+  font-size: 40px;
+  line-height: normal;
+}
+
+:global([data-platform='mobile']) .seal {
+  width: 34px;
+  height: 35px;
+  margin: 0;
+}
+
+/* 中央列铺满余高：tab 与正文间距 16（Figma 219:1673） */
+:global([data-platform='mobile']) .center {
+  position: static;
+  transform: none;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  gap: 16px;
+}
+
+/* tab 行 full-bleed（负 margin 冲掉纸页 padding）+ 横向滚动；nav 自身补回 24 padding，
+   两端尽头都停在画布 padding 线上（同底部五段栏的机制，见 MobileViewer.module.css） */
+:global([data-platform='mobile']) .tabsScroll {
+  display: flex;
+  margin-inline: -24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+:global([data-platform='mobile']) .tabsScroll::-webkit-scrollbar {
+  display: none;
+}
+
+:global([data-platform='mobile']) .tabsScroll > nav {
+  flex: none;
+  padding-inline: 24px;
+}
+
+/* 正文/引用 16px（行高保持 2.2，与信息卡 2.0 的区分不变） */
+:global([data-platform='mobile']) .paragraph,
+:global([data-platform='mobile']) .citationText {
+  font-size: 16px;
+}
+
+/* 底部区回到文档流：CTA 通栏红条（Figma 219:1669），16px（字距 0.15em 随字号自缩 = 2.4px） */
+:global([data-platform='mobile']) .bottom {
+  position: static;
+  padding: 0;
+}
+
+:global([data-platform='mobile']) .cta {
+  width: 100%;
+  font-size: 16px;
+}
+
 /* 无障碍：偏好减少动效时全部立即就位，只留 wrapper 自身的普通淡入。
    注意 .inkWindow 静态 transform 为 scale(1)、盖不满纸页——必须同时去掉 mask */
 @media (prefers-reduced-motion: reduce) {
   .inkWindow,
   .inkTexture,
   .wrapperFade .sheet,
+  .wrapperDismiss .sheet,
   .wrapperFirst .left,
   .wrapperFirst .center,
   .wrapperFirst .bottom {

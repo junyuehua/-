@@ -10,6 +10,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0; /* 移动端放进横向滚动容器时不许压缩变形 */
   height: 38px;
   padding: 8px 16px;
   background: var(--paper-80);

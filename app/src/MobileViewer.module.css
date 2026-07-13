@@ -1,0 +1,67 @@
+/* 移动壳层（移动端规格 md + Figma 219:1674）。画布 padding 统一 24（2026-07-13 用户拍板），
+   叠加 safe-area（刘海/圆角/home 条）取 max，不叠加双份 */
+
+/* —— 顶部右上角按钮簇：音乐 + 卷首重开（38px IconButton，间距 16 = Figma 实测）—— */
+.topButtons {
+  position: fixed;
+  top: max(24px, env(safe-area-inset-top, 0px));
+  right: max(24px, env(safe-area-inset-right, 0px));
+  z-index: 10;
+  display: flex;
+  gap: 16px;
+  transition: opacity 400ms ease;
+}
+
+/* —— 底部五段栏：通栏滚动容器 + 内容层带 padding ——
+   核心机制（用户拍板 2026-07-13）：容器铺满全宽 overflow-x 滚动；segInner 尺寸随内容、
+   padding-inline 24 让"滚到任一尽头"都停在画布 padding 线上；margin-inline:auto 在内容
+   不超宽时水平居中（justify-content:center + overflow 会裁掉起始端，是已知陷阱，勿改回） */
+.segScroll {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  z-index: 10;
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  /* scrollIntoView（当前段自动回视野）也要停在 padding 线上，不贴屏幕边 */
+  scroll-padding-inline: max(24px, env(safe-area-inset-left, 0px)) max(24px, env(safe-area-inset-right, 0px));
+  transition: opacity 400ms ease;
+}
+
+.segScroll::-webkit-scrollbar {
+  display: none;
+}
+
+.segInner {
+  flex: none;
+  margin-inline: auto;
+  padding-inline: max(24px, env(safe-area-inset-left, 0px)) max(24px, env(safe-area-inset-right, 0px));
+}
+
+/* 首次进入（卷首独占）期间壳层不可见不可点；「展阅」后随纸页淡出同步淡入 */
+.shellHidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* —— 视口清晰度指示条：同桌面（App.module.css），占位视觉 —— */
+.clarityBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  z-index: 12;
+  background: var(--ui-gold);
+  opacity: 0;
+  transition:
+    width 200ms ease,
+    opacity 400ms ease;
+  pointer-events: none;
+}
+
+.clarityBarVisible {
+  opacity: 0.9;
+}

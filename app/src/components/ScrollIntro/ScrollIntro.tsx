@@ -122,15 +122,18 @@ export function ScrollIntro({ onClose, visible, variant }: ScrollIntroProps) {
           />
         </aside>
 
-        {/* 中央列：水平居中，tab 与正文左对齐；tab 固定，正文独立滚动 */}
+        {/* 中央列：水平居中，tab 与正文左对齐；tab 固定，正文独立滚动。
+            tabsScroll 桌面无感（不溢出）；移动端 full-bleed 横向滚动、两端停在 padding 24 线上 */}
         <div className={styles.center}>
-          <PaperTabs
-            solid
-            ariaLabel="卷首章节"
-            items={TABS.map((t) => ({ id: t.id, label: t.title_zh }))}
-            activeId={activeId}
-            onSelect={(id) => switchTab(String(id))}
-          />
+          <div className={styles.tabsScroll}>
+            <PaperTabs
+              solid
+              ariaLabel="卷首章节"
+              items={TABS.map((t) => ({ id: t.id, label: t.title_zh }))}
+              activeId={activeId}
+              onSelect={(id) => switchTab(String(id))}
+            />
+          </div>
           <div
             ref={bodyRef}
             onScroll={updateFade}

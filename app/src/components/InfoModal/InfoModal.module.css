@@ -1,0 +1,24 @@
+/* 遮罩（Figma 219:1681：#241607 @ 50%）：盖住画面与移动壳层（底部五段栏/顶部按钮在其下变暗），
+   z 低于卷首(20)——卷首重开时压过一切。整屏可点关闭 */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(36, 22, 7, 0.5);
+}
+
+/* 卡片容器：宽 = min(100vw − 2×24, 420)（画布 padding 24；420 = 横屏/iPad/折叠屏的 max-width，
+   否则 modal 摊成宽带）；InfoCard 通过变量填满容器、正文上限随视口高度收缩（横屏尤其吃紧） */
+.holder {
+  width: min(100vw - 48px, 420px);
+}
+
+.card {
+  --infocard-max-w: none;
+  /* modal 总高 ≈ 正文 + 标题区/内外边距约 150px；100dvh − 150 − 上下留白 96 → 正文可用高 */
+  --infocard-body-max-h: min(420px, calc(100dvh - 246px));
+  width: 100%;
+}

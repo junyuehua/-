@@ -4,6 +4,7 @@ import '@fontsource/noto-serif-sc/500.css'
 import '@fontsource/noto-serif-sc/600.css'
 import '@fontsource/noto-serif-sc/700.css'
 import '@fontsource/noto-serif-sc/900.css' // 聚合标识计数字 Heavy（Figma 106:3907）
+import './platform' // 尽早落 data-platform，首帧 CSS 即按平台渲染
 import './styles/tokens.css'
 import './styles/fonts.css'
 import './styles/global.css'

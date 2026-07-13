@@ -9,6 +9,9 @@ import { SegmentNav } from './components/SegmentNav/SegmentNav'
 import { ViewportGate } from './components/ViewportGate/ViewportGate'
 import { InfoIIcon, MusicNoteIcon, MusicOffIcon, ViewRealSizeIcon } from './components/icons'
 import { Showcase } from './showcase/Showcase'
+import { IS_MOBILE } from './platform'
+import { MobileViewer } from './MobileViewer'
+import { useBgm, useIntroState } from './shellHooks'
 import annotationsData from '../annotations.json'
 import segmentsData from '../segments.json'
 import type { Annotation } from './viewer/annotations'
@@ -34,7 +37,8 @@ export default function App() {
   if (new URLSearchParams(window.location.search).has('showcase')) {
     return <Showcase />
   }
-  return <Viewer />
+  // 移动壳层（移动端规格 md）：单模式 + tap 出居中 modal + 底部五段栏；1024×640 门槛不适用
+  return IS_MOBILE ? <MobileViewer /> : <Viewer />
 }
 
 /** 标注数据：用户仍在持续打点，直接改 app/annotations.json 即可热更新 */
@@ -63,49 +67,9 @@ function Viewer() {
   const [clarity, setClarity] = useState(1)
   const handleClarity = useCallback((ratio: number) => setClarity(ratio), [])
 
-  // —— 卷首（Figma 108:3836）：每次加载默认打开，无持久化；点「展阅」淡出 400ms 后卸载，顶栏可重开 ——
-  // 首次进入 = 'first' variant（opaque 底图盖住画作，壳层 UI 全隐藏、音乐不可达）；
-  // firstVisit 在首次关闭"开始"时就置 false——壳层在纸页 400ms 淡出期间同步滑入；
-  // variant 用 ref 在整个 open→closing 周期内保持不变，莲花底图随纸页一起淡走、平滑露出画作
-  const [introState, setIntroState] = useState<'open' | 'closing' | 'closed'>('open')
-  const [firstVisit, setFirstVisit] = useState(true)
-  const introVariant = useRef<'first' | 'overlay'>('first')
-  const introTimer = useRef<number | undefined>(undefined)
-  const closeIntro = useCallback(() => {
-    setIntroState('closing')
-    setFirstVisit(false)
-    window.clearTimeout(introTimer.current)
-    introTimer.current = window.setTimeout(() => setIntroState('closed'), 400)
-  }, [])
-  const reopenIntro = useCallback(() => {
-    introVariant.current = 'overlay'
-    window.clearTimeout(introTimer.current)
-    setIntroState('open')
-  }, [])
-
-  // —— 背景音乐：默认不播放；首次点击从头播放，再点暂停，下次点击从暂停处续播（循环）——
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const [musicOn, setMusicOn] = useState(false)
-  const toggleMusic = useCallback(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio('/music/bgm.m4a')
-      audioRef.current.loop = true
-    }
-    const audio = audioRef.current
-    if (audio.paused) {
-      void audio.play()
-      setMusicOn(true)
-    } else {
-      audio.pause()
-      setMusicOn(false)
-    }
-  }, [])
-  useEffect(
-    () => () => {
-      audioRef.current?.pause()
-    },
-    [],
-  )
+  // —— 卷首开合 + 背景音乐：桌面/移动壳层共用逻辑（shellHooks，注释详见彼处）——
+  const { introState, firstVisit, introVariant, closeIntro, reopenIntro } = useIntroState()
+  const { musicOn, toggleMusic } = useBgm()
 
   // —— 比例 toast：缩放变化时出现，停留 TOAST_HIDE_MS 后消失（时长待实测调整）——
   const [toastVisible, setToastVisible] = useState(false)

@@ -1,0 +1,76 @@
+/* 「长卷宜宽屏」提醒（Figma 221:1715）：遮罩与信息 modal 同支（#241607@50%），
+   卡片同信息卡语系——纸面 80% + p8 + 金字描边内容框，宽度同 InfoModal 规则 */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(36, 22, 7, 0.5);
+}
+
+.card {
+  width: min(100vw - 48px, 420px);
+  padding: 8px;
+  background: var(--paper-80);
+  border-radius: var(--radius-sm);
+}
+
+/* 内容框：金字描边 p16、纵向居中排布，标题块与 CTA 间距 16 */
+.inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--gold-text);
+  border-radius: var(--radius-sm);
+}
+
+.textBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  text-align: center;
+}
+
+/* 标题：刻本宋 22 / 字金（信息卡标题同字号但字黑——这里是提示不是内容，用金收着） */
+.title {
+  margin: 0;
+  font-family: var(--font-kanji);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: normal;
+  color: var(--text-gold);
+}
+
+.body {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 2;
+  color: var(--text-black);
+}
+
+/* CTA「好的」（同「关闭」的 UI金语系）：14px Bold / 字距 0.15em / p 8×32 */
+.cta {
+  padding: 8px 32px;
+  background: var(--ui-gold);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--text-gold);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.cta:hover {
+  background: #eae0cb;
+}

@@ -59,6 +59,34 @@ export const TOAST_HIDE_MS = 1200
 export const MIN_VIEWPORT_W = 1024
 export const MIN_VIEWPORT_H = 640
 
+/* —— 移动端（移动端规格 md + Figma 218:1545/219:1674，2026-07-13）—— */
+/** 移动端画布 padding：卷首页面 / 浮层（modal、底部五段栏）统一 24（2026-07-13 用户拍板） */
+export const MOBILE_CANVAS_PAD = 24
+/**
+ * 移动端最小缩放 = 画高的一半入画（桌面"整卷 fit"在竖屏上是 18px 高的细条，无意义）：
+ * 保留一点总览能力，寻路交给底部五段栏。数值待实测调整。
+ */
+export const MOBILE_MIN_HEIGHT_FRACTION = 0.5
+export function mobileMinZoom(_vw: number, vh: number): number {
+  return (vh * MOBILE_MIN_HEIGHT_FRACTION) / CONTENT_H
+}
+/**
+ * 移动端底部预留（同桌面 NAVBAR_HEIGHT 的角色，给底部五段栏让位）：
+ * 栏距底 24 + 栏高 38 + 缓冲 8 = 70（safe-area 由栏自己往上抬，画面钳制不追）
+ */
+export const MOBILE_BOTTOM_RESERVE = () => 70
+/**
+ * 移动端开卷初始缩放 = 实物比例 × 此系数（**手动调这里**，只影响移动端）：
+ * 1 = 与桌面同为实物 100%；>1 更近（如 1.3 = 实物 130%），<1 更远。
+ * 位置维度不分平台（都停卷首最右端）。规格 §5"保证视野 1–2 个标识点"待标注密度实测后再定值
+ */
+export const MOBILE_INITIAL_SCALE = 0.8
+/** 移动端 marker 点击热区基准（规格 §6：触摸目标最小 44pt） */
+export const MOBILE_MARKER_HIT_SIZE = 44
+/** 信息 modal：遮罩色（Figma 219:1681）与卡片最大宽（横屏/iPad/折叠屏防摊宽，361 设计稿宽的放宽值） */
+export const MODAL_SCRIM = 'rgba(36, 22, 7, 0.5)'
+export const MODAL_MAX_W = 420
+
 /** 神游模式：顶部/底部唤醒热区高度 与 离开热区的隐藏缓冲 */
 export const EDGE_ZONE_TOP_PX = 120
 export const EDGE_ZONE_BOTTOM_PX = 160
@@ -106,16 +134,11 @@ export const CLUSTER_NUMERALS = ['一', '二', '三', '四', '五', '六', '七'
 export const MARKER_INK_MIN = 0.68
 export const MARKER_INK_MAX = 1
 
-/**
- * 分层显隐门槛（PRD §3.8，绑 tier；数值 = 相对实物比例，全部待实测可调）：
- * 地标任何缩放可见（当全卷导航锚点）；场景中等缩放浮现；细节到实物 100% 附近才出现。
- * [start, end] 为淡入区间——避免在门槛那一帧硬弹出。
- */
-export const TIER_REVEAL: Record<string, { start: number; end: number } | null> = {
-  地标: null, // 始终可见
-  场景: { start: 0.4, end: 0.5 },
-  细节: { start: 0.8, end: 1.0 },
-}
+/* 【已废弃 2026-07-13】分层显隐门槛（TIER_REVEAL，场景 40%/细节 80% 才浮现）整个机制删除：
+   全 tier 任何缩放常显、密度全交给聚合（先在移动端验证，后经用户拍板推广到桌面统一）——
+   聚合标记只说"这里有东西"，绕开了旧规则"缩太小元素看不清，圈是多余信息"的隐藏理由。
+   tier 仍管：圈大小、内容深度、地标不聚合。详见 decisions-log 同日条目 */
+
 /** 聚合阈值（屏幕像素距离，单阈值起步；双阈值防抖动留到真实内容实测再定，PRD §8） */
 export const CLUSTER_THRESHOLD_PX = 48
 /** marker/卡片共享悬停态的离开缓冲（PRD §3.8：250-300ms） */
