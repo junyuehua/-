@@ -74,7 +74,7 @@ export const NAVBAR_HEIGHT = (vw: number) => vw * 0.044
 
 /* —— 卧游/神游共用的自动平移引擎（PRD §3.2，数值全部待实测调参）—— */
 /** 平移锁屏幕速度恒定（非内容速度）：放大后卷上推进自然变慢，视觉节奏一致 */
-export const AUTO_PAN_SPEED_PX_S = 72
+export const AUTO_PAN_SPEED_PX_S = 50
 /** 悬停缓停的时间常数（速度乘子指数逼近 0，非硬刹；刹车距离 ≈ speed×tau ≈ 16px） */
 export const AUTO_PAN_STOP_TAU_MS = 220
 /** 缓起的时间常数（悬停移开/scrub 松手/切入模式后从 0 缓起） */
