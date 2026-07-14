@@ -3,7 +3,7 @@
 .toggle {
   display: inline-flex;
   gap: 2px;
-  padding: 3px;
+  padding: 2px;
   background: var(--paper-80);
   border: 1px solid var(--ui-gold);
   border-radius: var(--radius-md);

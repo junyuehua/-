@@ -17,6 +17,13 @@
   pointer-events: auto;
 }
 
+/* 左簇：模式切换 + 听画开关并排（2026-07-13 听画由右簇移来，紧邻模式切换右侧） */
+.topLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 /* 分段导览（mockup 108:3783）：顶栏正中，水平居中不受左右两簇宽度影响 */
 .topCenter {
   position: absolute;

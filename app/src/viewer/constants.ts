@@ -87,6 +87,9 @@ export const MOBILE_MARKER_HIT_SIZE = 44
 export const MODAL_SCRIM = 'rgba(36, 22, 7, 0.5)'
 export const MODAL_MAX_W = 420
 
+/** 听画朗读时背景音乐压低到的音量（不暂停，只降；2026-07-13） */
+export const BGM_DUCK_VOLUME = 0.2
+
 /** 神游模式：顶部/底部唤醒热区高度 与 离开热区的隐藏缓冲 */
 export const EDGE_ZONE_TOP_PX = 120
 export const EDGE_ZONE_BOTTOM_PX = 160

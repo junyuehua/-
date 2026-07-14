@@ -3,6 +3,7 @@ import { AppBackground } from './components/AppBackground/AppBackground'
 import { CopyEmailButton } from './components/CopyEmailButton/CopyEmailButton'
 import { IconButton } from './components/IconButton/IconButton'
 import { MODE_ORDER, ModeToggle, type ViewMode } from './components/ModeToggle/ModeToggle'
+import { NarrationToggle } from './components/NarrationToggle/NarrationToggle'
 import { NavBar } from './components/NavBar/NavBar'
 import { ScaleToast } from './components/ScaleControl/ScaleControl'
 import { ScrollIntro } from './components/ScrollIntro/ScrollIntro'
@@ -71,7 +72,10 @@ function Viewer() {
 
   // —— 卷首开合 + 背景音乐：桌面/移动壳层共用逻辑（shellHooks，注释详见彼处）——
   const { introState, firstVisit, introVariant, closeIntro, reopenIntro } = useIntroState()
-  const { musicOn, toggleMusic } = useBgm()
+  const { musicOn, toggleMusic, duckMusic } = useBgm()
+
+  // —— 听画总开关（默认关）：开启后悬停卡出现即朗读 ——
+  const [narrationOn, setNarrationOn] = useState(false)
 
   // —— 比例 toast：缩放变化时出现，停留 TOAST_HIDE_MS 后消失（时长待实测调整）——
   const [toastVisible, setToastVisible] = useState(false)
@@ -225,6 +229,8 @@ function Viewer() {
           zoomAtPoint={zoomAtPoint}
           wheelZoom={wheelZoom}
           onHoverActiveChange={setHoverActive}
+          narrationOn={narrationOn && mode !== 'immerse'}
+          duckMusic={duckMusic}
         />
       </ScrollCanvas>
 
@@ -234,7 +240,15 @@ function Viewer() {
       />
 
       <header className={`${styles.topBar} ${topVisible ? '' : styles.topHidden}`}>
-        <ModeToggle value={mode} onChange={setMode} />
+        {/* 左簇：模式切换 + 听画开关（听画仅读画/卧游生效；神游停用并半透明，Figma 233:1835） */}
+        <div className={styles.topLeft}>
+          <ModeToggle value={mode} onChange={setMode} />
+          <NarrationToggle
+            checked={narrationOn}
+            onChange={setNarrationOn}
+            disabled={mode === 'immerse'}
+          />
+        </div>
         <div className={styles.topCenter}>
           <SegmentNav segments={segments} activeId={activeSegment?.id} onSelect={handleSegmentSelect} />
         </div>

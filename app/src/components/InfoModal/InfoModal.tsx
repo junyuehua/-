@@ -1,6 +1,7 @@
+import { useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { InfoCard } from '../InfoCard/InfoCard'
-import { useBackClose } from '../../shellHooks'
+import { useBackClose, useNarration } from '../../shellHooks'
 import { categoryOf, type Annotation } from '../../viewer/annotations'
 import styles from './InfoModal.module.css'
 
@@ -8,6 +9,9 @@ interface InfoModalProps {
   /** 被 tap 的点位；null = 关闭（组件常挂载，由挂载方控制） */
   annotation: Annotation | null
   onClose: () => void
+  /** 听画总开关：开启后 modal 打开即从头朗读、关闭即停（移动端等价于桌面悬停卡） */
+  narrationOn?: boolean
+  duckMusic?: (on: boolean) => void
 }
 
 /**
@@ -17,9 +21,12 @@ interface InfoModalProps {
  * 卡片复用桌面 InfoCard，宽度 = min(100vw−48, 420)——横屏/iPad/折叠屏不摊宽；
  * 高度定死上限、超出走 InfoCard 内部滚动，modal 自身绝不超出屏幕。
  */
-export function InfoModal({ annotation, onClose }: InfoModalProps) {
+export function InfoModal({ annotation, onClose, narrationOn = false, duckMusic }: InfoModalProps) {
   // Android 返回键关闭（历史栈拦截）：逻辑在 shellHooks.useBackClose，与「长卷宜宽屏」提醒共用
   useBackClose(annotation !== null, onClose)
+  // 听画：modal 打开即从头朗读，关闭（annotation→null）即停、重开从头
+  const noopDuck = useCallback(() => {}, [])
+  useNarration(annotation?.id ?? null, narrationOn, duckMusic ?? noopDuck)
 
   if (!annotation) return null
 

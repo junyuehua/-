@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { AUDIO_IDS } from './generated/audioIds'
+import { BGM_DUCK_VOLUME } from './viewer/constants'
 
 /**
  * Android 系统返回键 = 关闭 modal 而非退出页面（移动端规格 §3）：打开时压入一条历史，
@@ -48,13 +50,55 @@ export function useBgm() {
       setMusicOn(false)
     }
   }, [])
+  // 听画朗读时压低（不暂停）背景音乐；朗读结束/中断恢复。音乐没开时是无害的 no-op
+  const duckMusic = useCallback((on: boolean) => {
+    const a = audioRef.current
+    if (a) a.volume = on ? BGM_DUCK_VOLUME : 1
+  }, [])
   useEffect(
     () => () => {
       audioRef.current?.pause()
     },
     [],
   )
-  return { musicOn, toggleMusic }
+  return { musicOn, toggleMusic, duckMusic }
+}
+
+/**
+ * 听画朗读（2026-07-13）：唤出信息卡即从头朗读，卡关闭立即停，重开从头。
+ * `audioId` = 当前打开卡片的标注 id（无卡时传 null）；`enabled` = 听画总开关；
+ * `duckMusic` = 播报时压低 BGM。实现要点：effect 依赖 audioId+enabled——
+ * 每次开卡新建 Audio（天然从头）；卡关闭（id→null）或切卡或关开关触发 cleanup 停播 + 恢复 BGM。
+ */
+export function useNarration(
+  audioId: number | null | undefined,
+  enabled: boolean,
+  duckMusic: (on: boolean) => void,
+) {
+  useEffect(() => {
+    if (!enabled || audioId == null || !AUDIO_IDS.has(audioId)) return
+    const audio = new Audio(`/audio/${audioId}.mp3`)
+    let ducked = true
+    duckMusic(true)
+    audio.play().catch(() => {
+      if (ducked) {
+        duckMusic(false)
+        ducked = false
+      }
+    })
+    const onEnded = () => {
+      if (ducked) {
+        duckMusic(false)
+        ducked = false
+      }
+    }
+    audio.addEventListener('ended', onEnded)
+    return () => {
+      audio.pause()
+      audio.removeEventListener('ended', onEnded)
+      if (ducked) duckMusic(false)
+    }
+  }, [audioId, enabled, duckMusic])
 }
 
 /**

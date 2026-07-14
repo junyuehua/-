@@ -25,6 +25,7 @@ import {
 } from './constants'
 import { categoryOf, type Annotation } from './annotations'
 import type { ViewState } from './useViewer'
+import { useNarration } from '../shellHooks'
 import styles from './MarkerLayer.module.css'
 
 /** 三种手绘朱圈（Figma 标记 106:3698），按点位 id 稳定随机分配，让画面笔触有变化不死板。
@@ -67,6 +68,10 @@ interface MarkerLayerProps {
    * 热区基准放大到 44pt；聚合点击行为不变（放大裂散）
    */
   onTapAnnotation?: (a: Annotation) => void
+  /** 听画总开关（PRD 听画交互）：开启后悬停卡出现即从头朗读、卡关闭即停 */
+  narrationOn?: boolean
+  /** 朗读时压低背景音乐（useBgm 提供） */
+  duckMusic?: (on: boolean) => void
 }
 
 /**
@@ -83,6 +88,8 @@ export function MarkerLayer({
   wheelZoom,
   onHoverActiveChange,
   onTapAnnotation,
+  narrationOn = false,
+  duckMusic,
 }: MarkerLayerProps) {
   const tapMode = onTapAnnotation !== undefined
   const [hoveredId, setHoveredId] = useState<number | null>(null)
@@ -205,6 +212,15 @@ export function MarkerLayer({
   useEffect(() => {
     onHoverActiveChange?.(hoverActive)
   }, [hoverActive, onHoverActiveChange])
+
+  // —— 听画：悬停卡出现即从头朗读（卡关闭/切卡/关开关自动停、重开从头）——
+  // tap 模式（移动端）无悬停卡，朗读交给 InfoModal；这里只管桌面悬停卡
+  const noopDuck = useCallback(() => {}, [])
+  useNarration(
+    hoverActive && !tapMode ? (hoveredSingle?.a.id ?? null) : null,
+    narrationOn && !tapMode,
+    duckMusic ?? noopDuck,
+  )
 
   // 高倍缩放温和放大（实物 100% 以内 growth=1，即原固定屏幕像素行为）；单圈与聚合统一
   const growth = markerGrowth(view.zoom)

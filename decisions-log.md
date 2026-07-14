@@ -511,3 +511,13 @@ Figma 148:1233。关键取舍：
 2. **悬停信息卡吞掉滚轮**：信息卡 portal 到 body、不在画布 stacking 子树里，滚轮打在卡上根本到不了画布的 wheel 监听器 → 缩放纹丝不动。而"读着卡片顺手滚一下缩小看周边"正好命中"尤其缩小"。修：卡片上挂一个非被动原生 wheel 监听（React 根上的 wheel 是 passive，preventDefault 不生效，故走 ref+addEventListener），逻辑=若卡内有可滚区且本方向未到头则让正文滚，否则把滚轮转成画布缩放。三分支实测：短卡→缩放；长卡未到底→滚正文不缩放；长卡到底→转缩放。
 
 实现：`useViewer` 抽出统一入口 `wheelZoom(clientX,clientY,deltaY,deltaMode)`，画布原生监听与信息卡共用；`MarkerLayer` 新增可选 `wheelZoom` prop（App 桌面传入，MobileViewer 不传——移动端无悬停卡、无滚轮）。
+
+### 听画朗读功能（2026-07-13）
+
+信息卡正文转语音。**免费方案 edge-tts**（微软 Edge 神经语音的开源库，无 key 无付费；用户先选了 Luvvoice 但 API 需付费套餐，改用 edge-tts，音质同档且我能端到端自动跑）。声音 **晓晓**（zh-CN-XiaoxiaoNeural，用户从晓晓/云健/云扬/晓伊 4 个试听里选）。
+
+- **朗读文本 = 标题 + 正文 + 引文**（用户拍板：标题要读、引文也要读，之前样本漏了标题、且我误跳过引文）：引文去 `>` 标记、链接 `[文字](url)` 只留文字。函数在 `scripts/generate-tts.py` 的 `speech_text`。
+- **预生成静态 MP3**（不前端实时调）：254 张卡全转 `public/audio/<id>.mp3`（13MB），脚本增量/`--force`，加改标注后重跑；同时写 `src/generated/audioIds.ts`（有音频的 id 集合）供前端判断。
+- **总开关「听画」checkbox**（Figma 233:1820，`NarrationToggle`）：右上按钮群最左第一个，默认关，**整个药丸可点非仅 checkbox**。开启后唤出信息卡即从头朗读、卡关闭立即停、重开从头。实现 `shellHooks.useNarration(audioId, enabled, duckMusic)`：effect 依赖 audioId+enabled，每次开卡 new Audio（天然从头），卡关闭（id→null）/切卡/关开关触发 cleanup 停播——桌面走 MarkerLayer 悬停卡（hoveredSingle.id）、移动走 InfoModal（annotation.id），同一 hook。
+- **BGM 压低不暂停**（用户拍板）：`useBgm.duckMusic(on)` 播报时把音量降到 `BGM_DUCK_VOLUME=0.2`、结束/中断恢复 1。
+- 验证（Playwright 插桩 Audio）：开关开+出卡→new+play；关卡/关开关→pause；重开→new+play（从头）；BGM 1→0.2→1。桌面 hover + 移动 tap 两端均过。

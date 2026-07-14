@@ -3,6 +3,7 @@ import { AppBackground } from './components/AppBackground/AppBackground'
 import { CopyEmailButton } from './components/CopyEmailButton/CopyEmailButton'
 import { IconButton } from './components/IconButton/IconButton'
 import { InfoModal } from './components/InfoModal/InfoModal'
+import { NarrationToggle } from './components/NarrationToggle/NarrationToggle'
 import { ScrollIntro } from './components/ScrollIntro/ScrollIntro'
 import { WidescreenHint } from './components/WidescreenHint/WidescreenHint'
 import { SegmentNav } from './components/SegmentNav/SegmentNav'
@@ -48,7 +49,10 @@ export function MobileViewer() {
   const handleClarity = useCallback((ratio: number) => setClarity(ratio), [])
 
   const { introState, firstVisit, introVariant, closeIntro, reopenIntro } = useIntroState()
-  const { musicOn, toggleMusic } = useBgm()
+  const { musicOn, toggleMusic, duckMusic } = useBgm()
+
+  // 听画总开关（默认关）：开启后 tap 出 modal 即朗读
+  const [narrationOn, setNarrationOn] = useState(false)
 
   // 状态栏随场景换色（theme-color 是唯一旋钮，状态栏不属于视口；两支色与初始预置见 platform.ts）：
   // 卷首可见（open）即纸色；点「展阅/关闭」开始淡出（closing）就切回深棕，与纸页 400ms 淡出方向一致。
@@ -130,8 +134,9 @@ export function MobileViewer() {
         style={{ width: `${clarity * 100}%` }}
       />
 
-      {/* 顶部右上角（Figma 219:1674）：音乐 + 卷首重开；顶部其余留给不可点信息（规格 §7） */}
+      {/* 顶部右上角（Figma 219:1674）：听画 + 邮箱 + 卷首重开 + 音乐；顶部其余留给不可点信息（规格 §7） */}
       <div className={`${styles.topButtons} ${shellHidden ? styles.shellHidden : ''}`}>
+        <NarrationToggle checked={narrationOn} onChange={setNarrationOn} />
         <CopyEmailButton />
         <IconButton icon={<InfoIIcon />} label="卷首" onClick={reopenIntro} />
         <IconButton
@@ -153,7 +158,12 @@ export function MobileViewer() {
         </div>
       </div>
 
-      <InfoModal annotation={selected} onClose={closeModal} />
+      <InfoModal
+        annotation={selected}
+        onClose={closeModal}
+        narrationOn={narrationOn}
+        duckMusic={duckMusic}
+      />
       <WidescreenHint open={hintOpen} onClose={closeHint} />
 
       {introState !== 'closed' && (
