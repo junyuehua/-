@@ -22,9 +22,12 @@ with open('segments.json', encoding='utf-8') as f:
     for s in json.load(f):
         chars.update(s.get('title_zh') or '')
 
-# 固定 UI 文案（ViewportGate 标题 / Showcase 标题 / 聚合数字 / 常用标点）
+# 固定 UI 文案（ViewportGate 标题 / 「长卷宜宽屏」提醒 / Showcase 标题 / 聚合数字 / 常用标点）
+# ⚠ 改动任何用 --font-kanji 的 UI 文案后，把新字加进来并重跑本脚本，否则静默回退 Noto
 EXTRA = (
     '卧游·清明上河图'
+    '请拉宽视窗'  # ViewportGate 标题（2026-07-13 改版）
+    '长卷宜宽屏'  # 移动端提醒 modal 标题（Figma 221:1715）
     '组件库'
     '一二三四五六七八九众'
     '（）「」《》·、。？！'
