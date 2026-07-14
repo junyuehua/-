@@ -6,6 +6,9 @@
   cursor: grab;
   touch-action: none;
   user-select: none;
+  /* 显式隔离混合组（2026-07-13 修 iOS 朱圈 multiply 失效）：底图/瓦片都是提升过的合成层，
+     iOS WebKit 对跨合成层取 backdrop 不可靠，明确圈定"在画布内完成混合"；桌面无副作用 */
+  isolation: isolate;
 }
 
 .dragging {

@@ -24,7 +24,10 @@
   position: absolute;
   width: 36px;
   height: 36px;
-  transform: translate(-50%, -50%);
+  /* translateZ(0)（2026-07-13 修 iOS multiply 失效）：把混合元素自己也提升成合成层——
+     iOS 的 CoreAnimation 能在合成层之间做 blend，"普通绘制层叠在合成层背景上"反而取不到 backdrop
+     （表现为朱圈乘在透明底上、鲜红浮起）。macOS WebKit（含 Playwright headed）不复现，只能真机验证 */
+  transform: translate(-50%, -50%) translateZ(0);
   display: flex;
   align-items: center;
   justify-content: center;

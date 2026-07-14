@@ -9,8 +9,8 @@ export function ViewportGate() {
     <div className={styles.gate}>
       <div className={styles.card}>
         <div className={styles.content}>
-          <h1 className={styles.title}>卧游·清明上河图</h1>
-          <p className={styles.hint}>请将窗口拉宽，或换到更大的屏幕观看。</p>
+          <h1 className={styles.title}>请拉宽视窗</h1>
+          <p className={styles.hint}>长卷需要更宽的画面，拉宽浏览器窗口即可展开。</p>
         </div>
       </div>
     </div>
