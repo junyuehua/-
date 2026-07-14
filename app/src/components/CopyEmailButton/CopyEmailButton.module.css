@@ -1,0 +1,24 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* toast 视觉复用比例 toast（ScaleControl 70:2434：h38/px16/纸面80%/radius2/思源宋 Bold 14），
+   定位在按钮正下方 8px、右缘对齐按钮；淡入淡出同壳层 fadeItem 节奏（200ms） */
+.toast {
+  composes: toast from '../ScaleControl/ScaleControl.module.css';
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 200ms ease,
+    visibility 200ms;
+}
+
+.toastVisible {
+  opacity: 1;
+  visibility: visible;
+}
