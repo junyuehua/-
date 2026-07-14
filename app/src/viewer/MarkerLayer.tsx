@@ -57,6 +57,8 @@ interface MarkerLayerProps {
   visible: boolean
   /** 以屏幕点为锚缩放（复用 useViewer 的锚定数学） */
   zoomAtPoint: (ax: number, ay: number, zoom: number, animate: boolean) => void
+  /** 统一滚轮缩放（useViewer 提供）：悬停卡 portal 到 body、滚轮到不了画布，需由卡自己补调 */
+  wheelZoom?: (clientX: number, clientY: number, deltaY: number, deltaMode: number) => void
   /** 上报"悬停/信息卡是否存活"——卧游自动平移的缓停/缓起信号（PRD §3.2） */
   onHoverActiveChange?: (active: boolean) => void
   /**
@@ -78,6 +80,7 @@ export function MarkerLayer({
   size,
   visible,
   zoomAtPoint,
+  wheelZoom,
   onHoverActiveChange,
   onTapAnnotation,
 }: MarkerLayerProps) {
@@ -231,6 +234,31 @@ export function MarkerLayer({
     el.style.top = `${top}px`
   }, [hoveredSingle, size])
 
+  // —— 悬停卡上的滚轮也缩放画布（2026-07-13 修"看着卡片滚不动"）——
+  // 卡片 portal 到 body、不在画布子树里，滚轮打在卡上到不了画布的 wheel 监听；这里补一个非被动监听：
+  // 若卡内有可滚区且本方向还没到头，让它自己滚（长正文）；否则把滚轮转成画布缩放。
+  // 用原生监听（非 React onWheel）：React 根上的 wheel 是 passive 的，preventDefault 不生效
+  const hoveredCardId = hoveredSingle?.a.id
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el || tapMode || !wheelZoom) return
+    const onWheel = (e: WheelEvent) => {
+      let node = e.target as HTMLElement | null
+      while (node && node !== el) {
+        if (node.scrollHeight > node.clientHeight + 1) {
+          const atTop = node.scrollTop <= 0
+          const atBottom = node.scrollTop + node.clientHeight >= node.scrollHeight - 1
+          if ((e.deltaY > 0 && !atBottom) || (e.deltaY < 0 && !atTop)) return // 让卡内正文滚
+        }
+        node = node.parentElement
+      }
+      e.preventDefault()
+      wheelZoom(e.clientX, e.clientY, e.deltaY, e.deltaMode)
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [hoveredCardId, tapMode, wheelZoom])
+
   return (
     <>
       <div className={`${styles.layer} ${visible ? '' : styles.layerHidden}`}>
@@ -316,7 +344,6 @@ export function MarkerLayer({
               }}
               onMouseEnter={() => hoverEnter(hoveredSingle.a.id)}
               onMouseLeave={hoverLeave}
-              onWheel={stop}
               onClick={stop}
               onPointerDown={stop}
               onPointerUp={stop}

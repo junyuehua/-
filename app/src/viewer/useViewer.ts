@@ -54,6 +54,15 @@ function clampView(v: ViewState, vw: number, vh: number, geo: Geometry): ViewSta
 
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
 
+/** 滚轮 deltaY 归一化到"像素当量"——WHEEL_ZOOM_SENSITIVITY 是按像素模式（每格≈100）校准的，
+    传统鼠标在部分浏览器报行模式（deltaY≈3）会导致每格只缩放 0.4% ≈ 没反应（2026-07-13 修）。
+    像素模式原样透传（保留触控板精度）；行模式按标准行高换算；页模式给一个固定大步长再夹住。 */
+function wheelDeltaToPx(deltaY: number, deltaMode: number): number {
+  if (deltaMode === 1) return deltaY * 16 // DOM_DELTA_LINE：一行 ≈ 16px
+  if (deltaMode === 2) return Math.sign(deltaY) * 120 // DOM_DELTA_PAGE：一页给固定一大步
+  return deltaY // DOM_DELTA_PIXEL
+}
+
 /** 画卷阅读方向右→左：初始视图停在卷首（内容最右端），缺省实物比例 100%，垂直居中——如同站在真迹前 */
 function initialView(vw: number, vh: number, geo: Geometry): ViewState {
   const z = geo.initialZoom
@@ -138,6 +147,17 @@ export function useViewer(options?: ViewerOptions) {
       }
     },
     [animateTo, apply, geo, stopAnim],
+  )
+
+  /** 统一滚轮缩放入口（画布与悬停信息卡共用）：deltaY 先按 deltaMode 归一，再走锚定缩放。
+      信息卡 portal 到 body、不在画布 stacking 里，滚轮打在卡上到不了画布监听器——由卡自己调本函数补上 */
+  const wheelZoom = useCallback(
+    (clientX: number, clientY: number, deltaY: number, deltaMode: number) => {
+      const px = wheelDeltaToPx(deltaY, deltaMode)
+      const factor = Math.exp(-px * WHEEL_ZOOM_SENSITIVITY)
+      zoomAtPoint(clientX, clientY, viewRef.current.zoom * factor, false)
+    },
+    [zoomAtPoint],
   )
 
   /** 恢复实际大小：回到实物比例 100%，以当前视口中心为锚（保持观看位置，不跳回卷首） */
@@ -339,12 +359,11 @@ export function useViewer(options?: ViewerOptions) {
     if (!el) return
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-      const factor = Math.exp(-e.deltaY * WHEEL_ZOOM_SENSITIVITY)
-      zoomAtPoint(e.clientX, e.clientY, viewRef.current.zoom * factor, false)
+      wheelZoom(e.clientX, e.clientY, e.deltaY, e.deltaMode)
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
-  }, [zoomAtPoint])
+  }, [wheelZoom])
 
   // —— 窗口尺寸变化：重新钳制视图 ——
   useEffect(() => {
@@ -366,6 +385,7 @@ export function useViewer(options?: ViewerOptions) {
     dragging,
     handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel },
     zoomAtPoint,
+    wheelZoom,
     resetToActual,
     jumpToFraction,
     flyToContent,

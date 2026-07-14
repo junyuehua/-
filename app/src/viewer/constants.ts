@@ -56,8 +56,8 @@ export const TOAST_HIDE_MS = 1200
  * 1024 = 顶栏三簇（模式切换/分段导览/音乐）无重叠的自然下限之上，且保留笔记本分屏场景；
  * 640 = 再矮画面可视高度不足 450px。与"移动端 UA 检测提示"互补，是两道独立检查。
  */
-export const MIN_VIEWPORT_W = 1024
-export const MIN_VIEWPORT_H = 640
+export const MIN_VIEWPORT_W = 980
+export const MIN_VIEWPORT_H = 520
 
 /* —— 移动端（移动端规格 md + Figma 218:1545/219:1674，2026-07-13）—— */
 /** 移动端画布 padding：卷首页面 / 浮层（modal、底部五段栏）统一 24（2026-07-13 用户拍板） */

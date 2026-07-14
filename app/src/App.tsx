@@ -57,6 +57,7 @@ function Viewer() {
     dragging,
     handlers,
     zoomAtPoint,
+    wheelZoom,
     resetToActual,
     jumpToFraction,
     flyToContent,
@@ -222,6 +223,7 @@ function Viewer() {
           size={size}
           visible={mode !== 'immerse'}
           zoomAtPoint={zoomAtPoint}
+          wheelZoom={wheelZoom}
           onHoverActiveChange={setHoverActive}
         />
       </ScrollCanvas>
