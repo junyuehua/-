@@ -1,0 +1,63 @@
+/* Figma 233:1820：药丸 border 1px UI金 / radius2 / px16 py8；未选纸面80%、hover 纸面实色。
+   高 38（22 行高 + 8×2）与按钮群其余 38px 按钮齐平 */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 8px 16px;
+  background: var(--paper-80);
+  border: 1px solid var(--ui-gold);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.toggle:hover {
+  background: var(--paper);
+}
+
+/* 停用（Figma 233:1835）：整体 50% 透明 + 不可点（神游模式），hover 不提亮 */
+.disabled {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* checkbox 方框 14×14：未选 = 纸面 + 2px UI金描边；选中见 .checked */
+.box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  background: var(--paper);
+  border: 2px solid var(--ui-gold);
+  border-radius: var(--radius-sm);
+  box-sizing: border-box;
+}
+
+/* 选中：UI 红实底 + 白勾（去掉描边，红块本身即边界） */
+.checked .box {
+  background: var(--ui-red);
+  border-color: var(--ui-red);
+  color: var(--text-white);
+}
+
+.check {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+/* 「听画」标签：思源宋 SemiBold 14 / 行高 22 / 字距 0.7px / 字黑 */
+.label {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  /*line-height: 22px;*/
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-gold);
+  white-space: nowrap;
+}
