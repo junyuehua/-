@@ -1,4 +1,5 @@
 import type { SVGProps } from 'react'
+import AlternateEmail from '@material-symbols/svg-400/outlined/alternate_email.svg?react'
 import InfoI from '@material-symbols/svg-400/outlined/info_i.svg?react'
 import MusicNote from '@material-symbols/svg-400/outlined/music_note.svg?react'
 import MusicOff from '@material-symbols/svg-400/outlined/music_off.svg?react'
@@ -16,6 +17,7 @@ function withIconDefaults(Icon: React.FC<SVGProps<SVGSVGElement>>) {
   }
 }
 
+export const AlternateEmailIcon = withIconDefaults(AlternateEmail)
 export const InfoIIcon = withIconDefaults(InfoI)
 export const MusicNoteIcon = withIconDefaults(MusicNote)
 export const MusicOffIcon = withIconDefaults(MusicOff)

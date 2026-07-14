@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppBackground } from './components/AppBackground/AppBackground'
+import { CopyEmailButton } from './components/CopyEmailButton/CopyEmailButton'
 import { IconButton } from './components/IconButton/IconButton'
 import { InfoModal } from './components/InfoModal/InfoModal'
 import { ScrollIntro } from './components/ScrollIntro/ScrollIntro'
@@ -131,6 +132,7 @@ export function MobileViewer() {
 
       {/* 顶部右上角（Figma 219:1674）：音乐 + 卷首重开；顶部其余留给不可点信息（规格 §7） */}
       <div className={`${styles.topButtons} ${shellHidden ? styles.shellHidden : ''}`}>
+        <CopyEmailButton />
         <IconButton icon={<InfoIIcon />} label="卷首" onClick={reopenIntro} />
         <IconButton
           icon={musicOn ? <MusicNoteIcon /> : <MusicOffIcon />}

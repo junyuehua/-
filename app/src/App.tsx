@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppBackground } from './components/AppBackground/AppBackground'
+import { CopyEmailButton } from './components/CopyEmailButton/CopyEmailButton'
 import { IconButton } from './components/IconButton/IconButton'
 import { MODE_ORDER, ModeToggle, type ViewMode } from './components/ModeToggle/ModeToggle'
 import { NavBar } from './components/NavBar/NavBar'
@@ -237,6 +238,7 @@ function Viewer() {
         </div>
         {/* 语言切换按钮移出 MVP（英文支持下个版本再做）；音乐 off 态用 Google music_off 图标 */}
         <div className={styles.topRight}>
+          <CopyEmailButton />
           <IconButton icon={<InfoIIcon />} label="卷首" onClick={reopenIntro} />
           <IconButton
             icon={musicOn ? <MusicNoteIcon /> : <MusicOffIcon />}
